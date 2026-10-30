@@ -165,7 +165,7 @@ export function Home() {
           <span className="tag">ამონაწერიდან · {p.balances.length + (p.savings ? 1 : 0)} ბანკი</span>
         </div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-          {p.balances.map(b => <BankChip key={b.bank} label={BANK_META[b.bank].label} amount={b.amount} color={BANK_META[b.bank].color} />)}
+          {p.balances.map(b => <BankChip key={b.bank} label={BANK_META[b.bank].label} amount={e.spendable > 0 ? Math.round((b.amount * v.balance) / e.spendable) : b.amount} color={BANK_META[b.bank].color} />)}
           {p.savings && <BankChip label={`${BANK_META[p.savings.bank].label} · რეზერვი`} amount={p.savings.amount} color={BANK_META[p.savings.bank].color} muted />}
           {p.overdraft && <span className="chip" style={{ background: '#fdecea', color: '#b4413b' }}>ოვერდრაფტი {gel(p.overdraft.used)} / {gel(p.overdraft.limit)}</span>}
         </div>
