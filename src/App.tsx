@@ -53,10 +53,16 @@ export function App() {
   return (
     <div className="stage">
       <aside className="side">
-        <h1>ხელფასამდე</h1>
-        <div className="sub">შენი ფულის ამინდის პროგნოზი</div>
-        <p>მუშა პროტოტიპი სინთეტიკურ მონაცემებზე. ძრავა ბრაუზერში ითვლის — იგივე seed, იგივე რიცხვები, რაც ჩვენს ცხრილში.</p>
-        <p><b>სცადე:</b> „რამის ყიდვა გინდა?" → 100 ₾ · ჯიხოსთან „1200 ლარის ტელეფონი განვადებით" · „⏩ შემდეგი დღე" ხელფასამდე.</p>
+        <Jikho size={84} mood="happy" stage={1} accessories={['scarf']} />
+        <h1 style={{ fontSize: 34, marginTop: 6 }}>ხელფასამდე</h1>
+        <div className="sub" style={{ fontSize: 15 }}>შენი ფულის ამინდის პროგნოზი</div>
+        <p>მუშა პროტოტიპი სინთეტიკურ მონაცემებზე. ძრავა ბრაუზერში ითვლის — იგივე რიცხვები, რაც ჩვენს ცხრილში.</p>
+        <ol style={{ paddingLeft: 18, margin: '10px 0', display: 'grid', gap: 6 }}>
+          <li><b>გზა:</b> „რამის ყიდვა გინდა?" → 100 ₾</li>
+          <li><b>ჯიხო:</b> „1 200 ₾-ის ტელეფონი განვადებით"</li>
+          <li>„და თუ აპრილამდე დავიცადო?"</li>
+          <li><b>⏩ შემდეგი დღე</b> — ხელფასამდე</li>
+        </ol>
         <div className="row" style={{ gap: 14, margin: '18px 0' }}>
           <QR text={PUBLIC_URL} />
           <div className="small">გახსენი<br />ტელეფონზე<br /><span className="muted">სკანირებით</span></div>
