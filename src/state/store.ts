@@ -89,6 +89,7 @@ export const useStore = create<Store>()(
       const lightStreak = () => {
         const g = get().games[get().personaId]
         if (g.litToday) return null
+        if (get().personaId === 'tamar') { patchGame(() => ({ litToday: true })); return null } // hardship: streak frozen, nothing lost
         patchGame(gg => ({ litToday: true, streak: gg.streak + 1 }))
         return g.streak + 1
       }
@@ -146,8 +147,7 @@ export const useStore = create<Store>()(
             if (!off && q0) get().toast('🏺', q0.sealedAt ? `ქვევრი „${q0.name}" დაილუქა! 🎉` : `+${amount} ₾ ქვევრში „${q0.name}" · ${q0.filled}/${q0.target}`)
           } else if (kind === 'evening') {
             patchGame(() => ({ eveningDone: true }))
-            const s = lightStreak()
-            if (!off) get().toast('🌙', `დღე დაიხურა${s ? ` · 🏮 სერია ${s} დღე` : ''}`)
+            if (!off) get().toast('🌙', 'დღე დაიხურა · ხვალ დილით ახალი ამინდი')
           } else if (kind === 'beat') {
             if (!off) get().toast('🎯', payload)
           }
@@ -163,7 +163,7 @@ export const useStore = create<Store>()(
             set({ demos: { ...get().demos, [id]: { ...d, day, ceremony: { landing, safe, cushion } } } })
             patchGame(gg => ({ cycles: gg.cycles + 1, stones: safe ? gg.stones + 1 : gg.stones, pendingChoice: safe && !gg.pendingChoice ? COSMETIC_POOL.map(c => c.id).filter(c => !gg.cosmetics.includes(c)).slice(0, 3) : gg.pendingChoice }))
           } else {
-            set({ demos: { ...get().demos, [id]: { ...d, day } }, games: { ...get().games, [id]: { ...get().games[id], checksToday: 0, litToday: false, morningDone: false, eveningDone: false } } })
+            set({ demos: { ...get().demos, [id]: { ...d, day } }, games: { ...get().games, [id]: { ...get().games[id], checksToday: 0, litToday: false, morningDone: false, eveningDone: false, questsDone: [] } } })
           }
         },
         buy: amount => {
