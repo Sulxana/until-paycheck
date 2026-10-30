@@ -1,0 +1,28 @@
+{
+  "name": "khelpasamde",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host",
+    "verify": "tsx scripts/verify.ts"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-georgian": "5.1.0",
+    "framer-motion": "11.11.17",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zustand": "5.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "tsx": "4.19.2",
+    "typescript": "5.6.3",
+    "vite": "5.4.11",
+    "vite-plugin-singlefile": "2.0.3"
+  }
+}

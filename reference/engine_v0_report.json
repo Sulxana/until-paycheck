@@ -1,0 +1,1050 @@
+{
+ "seed": 20261102,
+ "n_paths": 1000,
+ "today": "Mon 2 Nov 2026",
+ "payday": "Tue 10 Nov 2026",
+ "days_to_payday": 8,
+ "balances": {
+  "TBC": 318,
+  "BOG": 147,
+  "spendable": 465,
+  "credo_deposit_separate": 450
+ },
+ "fixed_streams": [
+  [
+   "ქირა",
+   600,
+   1
+  ],
+  [
+   "სპორტდარბაზი",
+   60,
+   1
+  ],
+  [
+   "მაგთი",
+   35,
+   3
+  ],
+  [
+   "თელასი",
+   52,
+   5
+  ],
+  [
+   "Spotify",
+   12,
+   6
+  ],
+  [
+   "თბილისი ენერჯი",
+   55,
+   7
+  ],
+  [
+   "სილქნეტი",
+   35,
+   12
+  ],
+  [
+   "ლეპტოპის განვადება (BOG)",
+   95,
+   15
+  ],
+  [
+   "GWP",
+   12,
+   20
+  ]
+ ],
+ "fixed_total": 956,
+ "fixed_share_of_salary_pct": 53,
+ "due_before_payday": [
+  [
+   "მაგთი",
+   35,
+   "3 ნოე"
+  ],
+  [
+   "თელასი",
+   52,
+   "5 ნოე"
+  ],
+  [
+   "Spotify",
+   12,
+   "6 ნოე"
+  ],
+  [
+   "თბილისი ენერჯი",
+   55,
+   "7 ნოე"
+  ]
+ ],
+ "due_total": 154,
+ "daily_spend": {
+  "avg_per_day": 23.8,
+  "median_per_day": 22.2,
+  "spend_8_days_p10_p50_p90": [
+   123,
+   177,
+   275
+  ],
+  "monthly_variable_median": 713
+ },
+ "cushion": {
+  "days": 3,
+  "gel": 70,
+  "rule": "3 x typical daily spend, rounded to 5 GEL; user-adjustable 2-7 days"
+ },
+ "landing_forecast": {
+  "p10": 32,
+  "p50": 128,
+  "p90": 187,
+  "p_below_cushion": 0.19,
+  "weather": "🌥 ღრუბლიანი",
+  "in_10_similar_months_below": 2,
+  "runway_days": 5,
+  "safe_to_spend_today": 7
+ },
+ "purchase_check_100": {
+  "p10": -75,
+  "p50": 30,
+  "p90": 87,
+  "p_below_cushion": 0.78,
+  "weather": "⛈ ქარიშხალი",
+  "in_10_similar_months_below": 8,
+  "days_of_spend_left": 1.3,
+  "same_purchase_after_payday_landing_p50": 159
+ },
+ "median_monthly_surplus_no_pledge": 131,
+ "installment": {
+  "price": 1200,
+  "rate_per_month": 0.015,
+  "eir_pct_at_1_5": 19.6,
+  "pti_cap_pct": 25,
+  "pti_cap_gel_from_2027_02_01": 450,
+  "pti_today_pct": 5.3,
+  "tenors_ordered_by_term": [
+   {
+    "tenor": "4 თვე, 0% (განვადება მაღაზიაში)",
+    "months": 4,
+    "monthly_payment": 300.0,
+    "total_paid": 1200,
+    "cost_of_credit": 0,
+    "eir_pct": 0.0,
+    "pti_today_pct": 21.9,
+    "pti_after_laptop_pct": 16.7,
+    "median_surplus_after_payment": -169,
+    "cycles_short_at_median": [
+     "10 დეკ 2026",
+     "10 იან 2027",
+     "10 თებ 2027",
+     "10 მარ 2027",
+     "10 აპრ 2027",
+     "10 მაი 2027",
+     "10 ივნ 2027",
+     "10 ივლ 2027"
+    ],
+    "n_short_of_12": 8,
+    "cycles": [
+     {
+      "cycle_end": "2026-12",
+      "label": "10 დეკ 2026",
+      "uplift": 40,
+      "laptop": 95,
+      "payment": 300.0,
+      "p10": -292,
+      "p50": -92,
+      "p90": 72,
+      "p_below_cushion": 0.89
+     },
+     {
+      "cycle_end": "2027-01",
+      "label": "10 იან 2027",
+      "uplift": 170,
+      "laptop": 95,
+      "payment": 300.0,
+      "p10": -697,
+      "p50": -441,
+      "p90": -220,
+      "p_below_cushion": 1.0
+     },
+     {
+      "cycle_end": "2027-02",
+      "label": "10 თებ 2027",
+      "uplift": 80,
+      "laptop": 95,
+      "payment": 300.0,
+      "p10": -1013,
+      "p50": -697,
+      "p90": -433,
+      "p_below_cushion": 1.0
+     },
+     {
+      "cycle_end": "2027-03",
+      "label": "10 მარ 2027",
+      "uplift": 30,
+      "laptop": 95,
+      "payment": 300.0,
+      "p10": -1270,
+      "p50": -912,
+      "p90": -604,
+      "p_below_cushion": 1.0
+     },
+     {
+      "cycle_end": "2027-04",
+      "label": "10 აპრ 2027",
+      "uplift": 0,
+      "laptop": 95,
+      "payment": 0.0,
+      "p10": -1184,
+      "p50": -792,
+      "p90": -438,
+      "p_below_cushion": 1.0
+     },
+     {
+      "cycle_end": "2027-05",
+      "label": "10 მაი 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -989,
+      "p50": -578,
+      "p90": -191,
+      "p_below_cushion": 0.99
+     },
+     {
+      "cycle_end": "2027-06",
+      "label": "10 ივნ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -821,
+      "p50": -364,
+      "p90": 39,
+      "p_below_cushion": 0.91
+     },
+     {
+      "cycle_end": "2027-07",
+      "label": "10 ივლ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -612,
+      "p50": -133,
+      "p90": 302,
+      "p_below_cushion": 0.72
+     },
+     {
+      "cycle_end": "2027-08",
+      "label": "10 აგვ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -450,
+      "p50": 91,
+      "p90": 564,
+      "p_below_cushion": 0.48
+     },
+     {
+      "cycle_end": "2027-09",
+      "label": "10 სექ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -229,
+      "p50": 299,
+      "p90": 796,
+      "p_below_cushion": 0.3
+     },
+     {
+      "cycle_end": "2027-10",
+      "label": "10 ოქტ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": -38,
+      "p50": 511,
+      "p90": 1026,
+      "p_below_cushion": 0.15
+     },
+     {
+      "cycle_end": "2027-11",
+      "label": "10 ნოე 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 0.0,
+      "p10": 151,
+      "p50": 723,
+      "p90": 1290,
+      "p_below_cushion": 0.07
+     }
+    ]
+   },
+   {
+    "tenor": "12 თვე, 1.5%/თვე",
+    "months": 12,
+    "monthly_payment": 110.0,
+    "total_paid": 1320,
+    "cost_of_credit": 120,
+    "eir_pct": 19.6,
+    "pti_today_pct": 11.4,
+    "pti_after_laptop_pct": 6.1,
+    "median_surplus_after_payment": 21,
+    "cycles_short_at_median": [
+     "10 იან 2027",
+     "10 თებ 2027",
+     "10 მარ 2027",
+     "10 აპრ 2027",
+     "10 მაი 2027"
+    ],
+    "n_short_of_12": 5,
+    "cycles": [
+     {
+      "cycle_end": "2026-12",
+      "label": "10 დეკ 2026",
+      "uplift": 40,
+      "laptop": 95,
+      "payment": 110.0,
+      "p10": -99,
+      "p50": 96,
+      "p90": 264,
+      "p_below_cushion": 0.43
+     },
+     {
+      "cycle_end": "2027-01",
+      "label": "10 იან 2027",
+      "uplift": 170,
+      "laptop": 95,
+      "payment": 110.0,
+      "p10": -319,
+      "p50": -55,
+      "p90": 168,
+      "p_below_cushion": 0.76
+     },
+     {
+      "cycle_end": "2027-02",
+      "label": "10 თებ 2027",
+      "uplift": 80,
+      "laptop": 95,
+      "payment": 110.0,
+      "p10": -420,
+      "p50": -127,
+      "p90": 145,
+      "p_below_cushion": 0.82
+     },
+     {
+      "cycle_end": "2027-03",
+      "label": "10 მარ 2027",
+      "uplift": 30,
+      "laptop": 95,
+      "payment": 110.0,
+      "p10": -495,
+      "p50": -153,
+      "p90": 175,
+      "p_below_cushion": 0.8
+     },
+     {
+      "cycle_end": "2027-04",
+      "label": "10 აპრ 2027",
+      "uplift": 0,
+      "laptop": 95,
+      "payment": 110.0,
+      "p10": -522,
+      "p50": -135,
+      "p90": 211,
+      "p_below_cushion": 0.76
+     },
+     {
+      "cycle_end": "2027-05",
+      "label": "10 მაი 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -457,
+      "p50": -23,
+      "p90": 362,
+      "p_below_cushion": 0.61
+     },
+     {
+      "cycle_end": "2027-06",
+      "label": "10 ივნ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -357,
+      "p50": 77,
+      "p90": 494,
+      "p_below_cushion": 0.49
+     },
+     {
+      "cycle_end": "2027-07",
+      "label": "10 ივლ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -280,
+      "p50": 189,
+      "p90": 650,
+      "p_below_cushion": 0.38
+     },
+     {
+      "cycle_end": "2027-08",
+      "label": "10 აგვ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -188,
+      "p50": 306,
+      "p90": 754,
+      "p_below_cushion": 0.29
+     },
+     {
+      "cycle_end": "2027-09",
+      "label": "10 სექ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -101,
+      "p50": 410,
+      "p90": 901,
+      "p_below_cushion": 0.21
+     },
+     {
+      "cycle_end": "2027-10",
+      "label": "10 ოქტ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": -29,
+      "p50": 521,
+      "p90": 1036,
+      "p_below_cushion": 0.15
+     },
+     {
+      "cycle_end": "2027-11",
+      "label": "10 ნოე 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 110.0,
+      "p10": 37,
+      "p50": 631,
+      "p90": 1188,
+      "p_below_cushion": 0.12
+     }
+    ]
+   },
+   {
+    "tenor": "24 თვე, 1.5%/თვე",
+    "months": 24,
+    "monthly_payment": 59.9,
+    "total_paid": 1438,
+    "cost_of_credit": 238,
+    "eir_pct": 19.6,
+    "pti_today_pct": 8.6,
+    "pti_after_laptop_pct": 3.3,
+    "median_surplus_after_payment": 71,
+    "cycles_short_at_median": [
+     "10 იან 2027",
+     "10 თებ 2027",
+     "10 მარ 2027"
+    ],
+    "n_short_of_12": 3,
+    "cycles": [
+     {
+      "cycle_end": "2026-12",
+      "label": "10 დეკ 2026",
+      "uplift": 40,
+      "laptop": 95,
+      "payment": 59.9,
+      "p10": -37,
+      "p50": 162,
+      "p90": 304,
+      "p_below_cushion": 0.28
+     },
+     {
+      "cycle_end": "2027-01",
+      "label": "10 იან 2027",
+      "uplift": 170,
+      "laptop": 95,
+      "payment": 59.9,
+      "p10": -213,
+      "p50": 53,
+      "p90": 259,
+      "p_below_cushion": 0.55
+     },
+     {
+      "cycle_end": "2027-02",
+      "label": "10 თებ 2027",
+      "uplift": 80,
+      "laptop": 95,
+      "payment": 59.9,
+      "p10": -279,
+      "p50": 32,
+      "p90": 302,
+      "p_below_cushion": 0.57
+     },
+     {
+      "cycle_end": "2027-03",
+      "label": "10 მარ 2027",
+      "uplift": 30,
+      "laptop": 95,
+      "payment": 59.9,
+      "p10": -299,
+      "p50": 57,
+      "p90": 382,
+      "p_below_cushion": 0.51
+     },
+     {
+      "cycle_end": "2027-04",
+      "label": "10 აპრ 2027",
+      "uplift": 0,
+      "laptop": 95,
+      "payment": 59.9,
+      "p10": -258,
+      "p50": 130,
+      "p90": 480,
+      "p_below_cushion": 0.41
+     },
+     {
+      "cycle_end": "2027-05",
+      "label": "10 მაი 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": -131,
+      "p50": 275,
+      "p90": 662,
+      "p_below_cushion": 0.24
+     },
+     {
+      "cycle_end": "2027-06",
+      "label": "10 ივნ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": -8,
+      "p50": 444,
+      "p90": 861,
+      "p_below_cushion": 0.14
+     },
+     {
+      "cycle_end": "2027-07",
+      "label": "10 ივლ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": 131,
+      "p50": 594,
+      "p90": 1014,
+      "p_below_cushion": 0.08
+     },
+     {
+      "cycle_end": "2027-08",
+      "label": "10 აგვ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": 253,
+      "p50": 762,
+      "p90": 1188,
+      "p_below_cushion": 0.04
+     },
+     {
+      "cycle_end": "2027-09",
+      "label": "10 სექ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": 401,
+      "p50": 921,
+      "p90": 1402,
+      "p_below_cushion": 0.02
+     },
+     {
+      "cycle_end": "2027-10",
+      "label": "10 ოქტ 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": 524,
+      "p50": 1079,
+      "p90": 1578,
+      "p_below_cushion": 0.01
+     },
+     {
+      "cycle_end": "2027-11",
+      "label": "10 ნოე 2027",
+      "uplift": 0,
+      "laptop": 0,
+      "payment": 59.9,
+      "p10": 673,
+      "p50": 1236,
+      "p90": 1780,
+      "p_below_cushion": 0.01
+     }
+    ]
+   }
+  ]
+ },
+ "baseline_no_phone": [
+  {
+   "cycle_end": "2026-12",
+   "label": "10 დეკ 2026",
+   "uplift": 40,
+   "laptop": 95,
+   "payment": 0.0,
+   "p10": 4,
+   "p50": 207,
+   "p90": 371,
+   "p_below_cushion": 0.19
+  },
+  {
+   "cycle_end": "2027-01",
+   "label": "10 იან 2027",
+   "uplift": 170,
+   "laptop": 95,
+   "payment": 0.0,
+   "p10": -120,
+   "p50": 151,
+   "p90": 375,
+   "p_below_cushion": 0.33
+  },
+  {
+   "cycle_end": "2027-02",
+   "label": "10 თებ 2027",
+   "uplift": 80,
+   "laptop": 95,
+   "payment": 0.0,
+   "p10": -134,
+   "p50": 190,
+   "p90": 455,
+   "p_below_cushion": 0.31
+  },
+  {
+   "cycle_end": "2027-03",
+   "label": "10 მარ 2027",
+   "uplift": 30,
+   "laptop": 95,
+   "payment": 0.0,
+   "p10": -58,
+   "p50": 279,
+   "p90": 584,
+   "p_below_cushion": 0.22
+  },
+  {
+   "cycle_end": "2027-04",
+   "label": "10 აპრ 2027",
+   "uplift": 0,
+   "laptop": 95,
+   "payment": 0.0,
+   "p10": 24,
+   "p50": 402,
+   "p90": 742,
+   "p_below_cushion": 0.14
+  },
+  {
+   "cycle_end": "2027-05",
+   "label": "10 მაი 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 214,
+   "p50": 614,
+   "p90": 998,
+   "p_below_cushion": 0.04
+  },
+  {
+   "cycle_end": "2027-06",
+   "label": "10 ივნ 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 381,
+   "p50": 826,
+   "p90": 1253,
+   "p_below_cushion": 0.01
+  },
+  {
+   "cycle_end": "2027-07",
+   "label": "10 ივლ 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 573,
+   "p50": 1034,
+   "p90": 1487,
+   "p_below_cushion": 0.0
+  },
+  {
+   "cycle_end": "2027-08",
+   "label": "10 აგვ 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 757,
+   "p50": 1258,
+   "p90": 1723,
+   "p_below_cushion": 0.0
+  },
+  {
+   "cycle_end": "2027-09",
+   "label": "10 სექ 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 951,
+   "p50": 1471,
+   "p90": 1964,
+   "p_below_cushion": 0.0
+  },
+  {
+   "cycle_end": "2027-10",
+   "label": "10 ოქტ 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 1121,
+   "p50": 1690,
+   "p90": 2215,
+   "p_below_cushion": 0.0
+  },
+  {
+   "cycle_end": "2027-11",
+   "label": "10 ნოე 2027",
+   "uplift": 0,
+   "laptop": 0,
+   "payment": 0.0,
+   "p10": 1312,
+   "p50": 1892,
+   "p90": 2460,
+   "p_below_cushion": 0.0
+  }
+ ],
+ "whatif_start_april_12m": {
+  "monthly_payment": 110.0,
+  "cost_of_credit": 120,
+  "rows": [
+   {
+    "cycle_end": "2027-05",
+    "label": "10 მაი 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 101,
+    "p50": 507,
+    "p90": 889,
+    "p_below_cushion": 0.08
+   },
+   {
+    "cycle_end": "2027-06",
+    "label": "10 ივნ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 198,
+    "p50": 606,
+    "p90": 1024,
+    "p_below_cushion": 0.05
+   },
+   {
+    "cycle_end": "2027-07",
+    "label": "10 ივლ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 268,
+    "p50": 727,
+    "p90": 1160,
+    "p_below_cushion": 0.04
+   },
+   {
+    "cycle_end": "2027-08",
+    "label": "10 აგვ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 344,
+    "p50": 841,
+    "p90": 1273,
+    "p_below_cushion": 0.03
+   },
+   {
+    "cycle_end": "2027-09",
+    "label": "10 სექ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 423,
+    "p50": 939,
+    "p90": 1408,
+    "p_below_cushion": 0.02
+   },
+   {
+    "cycle_end": "2027-10",
+    "label": "10 ოქტ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 497,
+    "p50": 1048,
+    "p90": 1524,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2027-11",
+    "label": "10 ნოე 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 594,
+    "p50": 1153,
+    "p90": 1674,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2027-12",
+    "label": "10 დეკ 2027",
+    "uplift": 40,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 626,
+    "p50": 1226,
+    "p90": 1723,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2028-01",
+    "label": "10 იან 2028",
+    "uplift": 170,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 548,
+    "p50": 1156,
+    "p90": 1688,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2028-02",
+    "label": "10 თებ 2028",
+    "uplift": 80,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 568,
+    "p50": 1185,
+    "p90": 1751,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2028-03",
+    "label": "10 მარ 2028",
+    "uplift": 30,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 633,
+    "p50": 1271,
+    "p90": 1861,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2028-04",
+    "label": "10 აპრ 2028",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 110.0,
+    "p10": 728,
+    "p50": 1367,
+    "p90": 1980,
+    "p_below_cushion": 0.01
+   },
+   {
+    "cycle_end": "2028-05",
+    "label": "10 მაი 2028",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 0.0,
+    "p10": 911,
+    "p50": 1593,
+    "p90": 2194,
+    "p_below_cushion": 0.0
+   }
+  ],
+  "n_short_at_median": 0
+ },
+ "whatif_300_from_deposit_12m": {
+  "principal": 900,
+  "monthly_payment": 82.5,
+  "total": 990,
+  "cost_of_credit": 90,
+  "rows": [
+   {
+    "cycle_end": "2026-12",
+    "label": "10 დეკ 2026",
+    "uplift": 40,
+    "laptop": 95,
+    "payment": 82.5,
+    "p10": -61,
+    "p50": 130,
+    "p90": 284,
+    "p_below_cushion": 0.35
+   },
+   {
+    "cycle_end": "2027-01",
+    "label": "10 იან 2027",
+    "uplift": 170,
+    "laptop": 95,
+    "payment": 82.5,
+    "p10": -255,
+    "p50": 3,
+    "p90": 229,
+    "p_below_cushion": 0.62
+   },
+   {
+    "cycle_end": "2027-02",
+    "label": "10 თებ 2027",
+    "uplift": 80,
+    "laptop": 95,
+    "payment": 82.5,
+    "p10": -338,
+    "p50": -36,
+    "p90": 241,
+    "p_below_cushion": 0.68
+   },
+   {
+    "cycle_end": "2027-03",
+    "label": "10 მარ 2027",
+    "uplift": 30,
+    "laptop": 95,
+    "payment": 82.5,
+    "p10": -384,
+    "p50": -26,
+    "p90": 299,
+    "p_below_cushion": 0.66
+   },
+   {
+    "cycle_end": "2027-04",
+    "label": "10 აპრ 2027",
+    "uplift": 0,
+    "laptop": 95,
+    "payment": 82.5,
+    "p10": -368,
+    "p50": 18,
+    "p90": 376,
+    "p_below_cushion": 0.57
+   },
+   {
+    "cycle_end": "2027-05",
+    "label": "10 მაი 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": -306,
+    "p50": 150,
+    "p90": 531,
+    "p_below_cushion": 0.4
+   },
+   {
+    "cycle_end": "2027-06",
+    "label": "10 ივნ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": -189,
+    "p50": 279,
+    "p90": 702,
+    "p_below_cushion": 0.27
+   },
+   {
+    "cycle_end": "2027-07",
+    "label": "10 ივლ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": -92,
+    "p50": 406,
+    "p90": 873,
+    "p_below_cushion": 0.19
+   },
+   {
+    "cycle_end": "2027-08",
+    "label": "10 აგვ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": 28,
+    "p50": 539,
+    "p90": 1052,
+    "p_below_cushion": 0.12
+   },
+   {
+    "cycle_end": "2027-09",
+    "label": "10 სექ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": 117,
+    "p50": 675,
+    "p90": 1172,
+    "p_below_cushion": 0.08
+   },
+   {
+    "cycle_end": "2027-10",
+    "label": "10 ოქტ 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": 268,
+    "p50": 808,
+    "p90": 1358,
+    "p_below_cushion": 0.06
+   },
+   {
+    "cycle_end": "2027-11",
+    "label": "10 ნოე 2027",
+    "uplift": 0,
+    "laptop": 0,
+    "payment": 82.5,
+    "p10": 350,
+    "p50": 951,
+    "p90": 1518,
+    "p_below_cushion": 0.04
+   }
+  ],
+  "n_short_at_median": 4,
+  "foregone_deposit_interest_per_year_at_10pct": 30
+ },
+ "with_pledge_100": {
+  "baseline_short": [
+   "10 იან 2027",
+   "10 თებ 2027",
+   "10 მარ 2027",
+   "10 აპრ 2027",
+   "10 მაი 2027"
+  ],
+  "tenor_24_short": [
+   "10 დეკ 2026",
+   "10 იან 2027",
+   "10 თებ 2027",
+   "10 მარ 2027",
+   "10 აპრ 2027",
+   "10 მაი 2027",
+   "10 ივნ 2027",
+   "10 ივლ 2027",
+   "10 აგვ 2027",
+   "10 სექ 2027",
+   "10 ოქტ 2027",
+   "10 ნოე 2027"
+  ]
+ },
+ "lesson_numbers": {
+  "fixed_share_pct": 53,
+  "compound_1000_10pct_20y": 6727,
+  "simple_1000_10pct_20y": 3000.0,
+  "gap": 3727.0
+ },
+ "power": {
+  "n150_d": 0.46,
+  "n300_d": 0.32
+ }
+}
