@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
@@ -47,6 +47,32 @@ export function Home() {
   const weather = preview ?? v.weather
   const idx = e.demoPathIndex()
 
+  const [bubble, setBubble] = useState<string | null>(null)
+  const [hop, setHop] = useState(0)
+  const tipIdx = useRef(0)
+  const tips = [
+    v.hardship ? 'ერთად გავალაგოთ გადასახადები. არაფერი იკარგება — სერიაც და სოფელიც ადგილზეა.' : jikhoLine(v.weather),
+    v.safeToday > 0 ? `ხელფასამდე ${v.daysLeft} დღეა. დღეს ჩვეულებრივზე ~${v.safeToday} ₾ მეტი შეგიძლია.` : `ხელფასამდე ${v.daysLeft} დღეა. ამ დღეებში აუცილებელი ხარჯი წინ — დანარჩენი მოიცდის.`,
+    'რამის ყიდვას აპირებ? ჯერ შეამოწმე — ხიდს ფიცარი დაემატება 🪵',
+    'დილის 3 კითხვა სერიას ანთებს 🏮 და სკოლას წიგნს მატებს.',
+    'განვადებაზე ფიქრობ? მკითხე — ყველა ვადას შენს თვეებზე გაჩვენებ.',
+  ]
+  useEffect(() => {
+    const a = setTimeout(() => setBubble(tips[0]), 700)
+    const b = setTimeout(() => setBubble(null), 5200)
+    return () => { clearTimeout(a); clearTimeout(b) }
+  }, [v.day, v.weather, p.id])
+  const tapJikho = () => {
+    tipIdx.current = (tipIdx.current + 1) % tips.length
+    setBubble(tips[tipIdx.current])
+    setHop(h => h + 1)
+  }
+  useEffect(() => {
+    if (!bubble) return
+    const t = setTimeout(() => setBubble(null), 5000)
+    return () => clearTimeout(t)
+  }, [bubble])
+
   const step = () => advanceDay(v.nDays, (day, extra) => ({ landing: Math.round(e.forecastAtDay(day, idx, extra).balance), cushion: e.cushion }))
 
   return (
@@ -66,7 +92,7 @@ export function Home() {
       </div>
 
       <div style={{ position: 'relative' }}>
-        <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} />
+        <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} bubble={preview ? null : bubble} onJikhoTap={tapJikho} hop={hop} />
         {/* time machine */}
         <div style={{ position: 'absolute', right: 12, bottom: 50, zIndex: 2 }} className="row">
           {!demo.finished ? (

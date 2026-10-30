@@ -20,6 +20,9 @@ interface Props {
   accessories: Accessory[]
   height?: number
   walking?: boolean
+  bubble?: string | null
+  onJikhoTap?: () => void
+  hop?: number
 }
 
 /** tile positions along a winding mountain road, left (today) to right (payday camp) */
@@ -34,7 +37,7 @@ function tilePoints(n: number) {
   return pts
 }
 
-export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stage, accessories, height = 290, walking }: Props) {
+export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stage, accessories, height = 290, walking, bubble, onJikhoTap, hop = 0 }: Props) {
   const pts = tilePoints(nDays)
   const here = pts[Math.min(day, nDays)]
   const [top, bottom] = SKY[weather]
@@ -177,7 +180,28 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
           transition={{ type: 'spring', stiffness: 60, damping: 14 }}
           style={{ position: 'absolute', transform: 'translate(-50%, -88%)' }}
         >
-          <Jikho size={92} mood={mood} stage={stage} accessories={acc} walking={walking} />
+          <AnimatePresence>
+            {bubble && (
+              <motion.div
+                key={bubble}
+                initial={{ opacity: 0, y: 8, scale: 0.85 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.9 }}
+                transition={{ type: 'spring', damping: 16, stiffness: 260 }}
+                style={{
+                  position: 'absolute', bottom: '92%', left: day > nDays / 2 ? 'auto' : 18, right: day > nDays / 2 ? 18 : 'auto', width: 190,
+                  background: '#fff', borderRadius: 16, padding: '8px 11px', fontSize: 12.5, lineHeight: 1.4, fontWeight: 600,
+                  color: 'var(--ink)', boxShadow: '0 8px 22px rgba(31,59,87,0.22)', pointerEvents: 'none',
+                }}
+              >
+                {bubble}
+                <span style={{ position: 'absolute', bottom: -6, [day > nDays / 2 ? 'right' : 'left']: 22, width: 12, height: 12, background: '#fff', transform: 'rotate(45deg)' }} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <motion.div key={hop} animate={hop ? { y: [0, -18, 0] } : undefined} transition={{ duration: 0.45 }} onClick={onJikhoTap} style={{ pointerEvents: onJikhoTap ? 'auto' : 'none', cursor: onJikhoTap ? 'pointer' : 'default' }}>
+            <Jikho size={92} mood={mood} stage={stage} accessories={acc} walking={walking} />
+          </motion.div>
         </motion.div>
       </motion.div>
     </div>
