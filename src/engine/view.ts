@@ -10,6 +10,9 @@ export const fmt = (n: number, d = 0) => {
   return (n < 0 ? '−' : '') + g + (f ? ',' + f : '')
 }
 export const gel = (n: number, d = 0) => `${fmt(n, d)} ₾`
+/** "30–190 ₾", or "−30…+20 ₾" when the range crosses zero */
+export const rangeText = (lo: number, hi: number) =>
+  lo < 0 ? `${fmt(lo)}…${hi > 0 ? '+' : ''}${fmt(hi)} ₾` : `${fmt(lo)}–${fmt(hi)} ₾`
 
 export function usePersona(): Persona {
   const id = useStore(s => s.personaId)

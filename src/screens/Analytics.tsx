@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../state/store'
-import { useToday, gel, fmt } from '../engine/view'
+import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { FanChart } from '../components/FanChart'
 import { WeatherChip, Disclaimer } from '../components/ui'
 import { BANK_META } from '../engine/personas'
@@ -46,7 +46,7 @@ function Payday() {
     <>
       <div className="card">
         <div className="between"><div className="h3">ბალანსი ხელფასამდე</div><WeatherChip w={e.landing.weather} /></div>
-        <div className="small muted" style={{ margin: '4px 0 6px' }}>დღეს {gel(e.spendable)} → ხელფასის დღეს ~{gel(Math.round(e.landing.p50 / 10) * 10)} ({fmt(Math.round(e.landing.p10 / 10) * 10)}–{fmt(Math.round(e.landing.p90 / 10) * 10)})</div>
+        <div className="small muted" style={{ margin: '4px 0 6px' }}>დღეს {gel(e.spendable)} → ხელფასის დღეს ~{gel(Math.round(e.landing.p50 / 10) * 10)} ({rangeText(Math.round(e.landing.p10 / 10) * 10, Math.round(e.landing.p90 / 10) * 10)})</div>
         <FanChart data={fan} cushion={e.cushion} bills={bills} />
         <div className="row tiny muted" style={{ gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
           <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#5aa9e6', opacity: 0.4, borderRadius: 3 }} /> 10 მსგავსი თვიდან 8</span>

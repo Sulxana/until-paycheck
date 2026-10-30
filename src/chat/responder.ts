@@ -2,7 +2,7 @@ import { Engine, TenorResult, KA_MONTHS_FULL, WEATHER_LABEL } from '../engine/en
 import { Persona } from '../engine/personas'
 import { ChatMsg, ChatCard } from '../state/store'
 import { parse, Parsed, ConceptId } from './parser'
-import { fmt, gel } from '../engine/view'
+import { fmt, gel, rangeText } from '../engine/view'
 
 export interface Ctx {
   kind: 'purchase' | 'installment' | 'loan' | null
@@ -162,7 +162,7 @@ const CONCEPT_TEXT: Record<ConceptId, (e: Engine, p: Persona) => { title: string
   weather: e => ({
     title: 'როგორ ვითვლი ამინდს',
     body: 'შენი ბოლო 6 თვიდან ვპოულობ განმეორებად გადასახადებს და დღიურ ხარჯს კვირის დღეების მიხედვით. მერე ხელფასამდე დარჩენილ დღეებს 1 000-ჯერ ვათამაშებ — ამიტომ გაჩვენებ დიაპაზონს და არა ერთ რიცხვს. ხელოვნური ინტელექტი არცერთ რიცხვს არ იგონებს.',
-    mine: `ახლა: ${fmt(r10(e.landing.p10))}–${fmt(r10(e.landing.p90))} ₾, ყველაზე სავარაუდოდ ~${fmt(r10(e.landing.p50))} ₾, ${WEATHER_LABEL[e.landing.weather]}.`,
+    mine: `ახლა: ${rangeText(r10(e.landing.p10), r10(e.landing.p90))}, ყველაზე სავარაუდოდ ~${fmt(r10(e.landing.p50))} ₾, ${WEATHER_LABEL[e.landing.weather]}.`,
     rule: 'ერთ ხელფასზე შორს ეს ექსტრაპოლაციაა: ვვარაუდობ, რომ შენი ბოლო თვეები მეორდება.',
   }),
   zero: () => ({
@@ -256,7 +256,7 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
     case 'forecast': {
       const f = day0 ? e.landing : e.forecastAtDay(demo.day, e.demoPathIndex(), demo.extra).landing
       const daysLeft = p.dayPattern.length - demo.day
-      return { msgs: [jk(`ხელფასამდე ${daysLeft} დღეა. სავარაუდოდ ~${fmt(r10(f.p50))} ₾ დაგრჩება (${fmt(r10(f.p10))}–${fmt(r10(f.p90))}), ${WEATHER_LABEL[f.weather]} — 10-დან ${f.inTen}-ში ზღვარს ქვემოთ. ${daysText(f.p50, e.avgDaily)}.`, ['დღეს რამდენი შემიძლია?', 'როგორ ვითვლი ამინდს?'], { kind: 'forecast', data: { fan: e.fan(), cushion: e.cushion, landing: f } })], ctx, mood: f.weather === 'sun' || f.weather === 'cloud' ? 'happy' : 'worried' }
+      return { msgs: [jk(`ხელფასამდე ${daysLeft} დღეა. სავარაუდოდ ~${fmt(r10(f.p50))} ₾ დაგრჩება (${rangeText(r10(f.p10), r10(f.p90))}), ${WEATHER_LABEL[f.weather]} — 10-დან ${f.inTen}-ში ზღვარს ქვემოთ. ${daysText(f.p50, e.avgDaily)}.`, ['დღეს რამდენი შემიძლია?', 'როგორ ვითვლი ამინდს?'], { kind: 'forecast', data: { fan: e.fan(), cushion: e.cushion, landing: f } })], ctx, mood: f.weather === 'sun' || f.weather === 'cloud' ? 'happy' : 'worried' }
     }
     case 'save': {
       const amount = q.amount ?? ctx.amount ?? 1200

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL } from '../state/store'
-import { useToday, gel, fmt } from '../engine/view'
+import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { RoadScene } from '../components/RoadScene'
 import { Jikho, JikhoMood } from '../components/Jikho'
 import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI } from '../components/ui'
@@ -59,7 +59,7 @@ export function Home() {
         </button>
         <div className="row" style={{ gap: 6 }}>
           {!gameOff && (
-            <span className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} title="სერია">🏮 {game.streak}{game.litToday ? '' : ''}</span>
+            <span className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} title="სერია">{v.hardship ? '❄ გაყინულია' : `🏮 ${game.streak}`}</span>
           )}
           <button className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} onClick={() => setSettingsOpen(true)} aria-label="პარამეტრები">⚙️</button>
         </div>
@@ -95,7 +95,7 @@ export function Home() {
             <motion.div key={v.landing.p50} initial={{ opacity: 0.4, y: 6 }} animate={{ opacity: 1, y: 0 }} className="big">
               {demo.finished ? gel(Math.round(v.balance)) : `~${fmt(r10(v.landing.p50))} ₾`}
             </motion.div>
-            {!demo.finished && <div className="muted small">{fmt(r10(v.landing.p10))}–{fmt(r10(v.landing.p90))} ₾</div>}
+            {!demo.finished && <div className="muted small">{rangeText(r10(v.landing.p10), r10(v.landing.p90))}</div>}
           </div>
           {!demo.finished && (
             <>

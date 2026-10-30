@@ -62,7 +62,7 @@ export function Village() {
       <motion.div className="pad" style={{ paddingTop: hardship ? 12 : 18 }} {...enter(0)}>
         <div className="between">
           <div className="h2" style={{ fontSize: 22 }}>ჯიხოს სოფელი</div>
-          <span className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} title="სერია და გაყინვები">🏮 {game.streak} დღე · ❄ {game.freezes}</span>
+          <span className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} title="სერია და გაყინვები">{hardship ? '❄ სერია გაყინულია' : `🏮 ${game.streak} დღე · ❄ ${game.freezes}`}</span>
         </div>
         <div className="card" style={{ marginTop: 10, padding: '10px 12px' }}>
           <div className="row" style={{ gap: 10 }}>
