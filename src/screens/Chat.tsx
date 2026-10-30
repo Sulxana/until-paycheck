@@ -124,15 +124,25 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
       <div className="card" style={{ padding: 14 }}>
         <div className="small" style={{ fontWeight: 800, marginBottom: 8 }}>{d.title}</div>
         {d.compare && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
-            <div style={{ background: '#fdecea', borderRadius: 12, padding: 10 }}>
-              <div className="tiny muted" style={{ fontWeight: 700 }}>ახლა</div>
-              <div style={{ fontWeight: 800 }}>⛈ {d.compare.nowShort} თვე აკლდება</div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ background: '#fdecea', borderRadius: 14, padding: '10px 12px' }}>
+                <div className="tiny" style={{ fontWeight: 800, color: '#b4413b' }}>ახლა</div>
+                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>⛈️ {d.compare.nowShort}</div>
+                <div className="tiny muted">თვე ზღვარს ქვემოთ</div>
+              </div>
+              <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, type: 'spring', damping: 11 }} style={{ background: '#e6f6ea', borderRadius: 14, padding: '10px 12px' }}>
+                <div className="tiny" style={{ fontWeight: 800, color: 'var(--good)' }}>{d.rows[0]?.label?.includes('აპრილ') ? 'აპრილიდან' : 'მოგვიანებით'}</div>
+                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{d.compare.short === 0 ? '☀️ 0' : `🌥️ ${d.compare.short}`}</div>
+                <div className="tiny muted">თვე ზღვარს ქვემოთ</div>
+              </motion.div>
             </div>
-            <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.4, type: 'spring' }} style={{ background: '#e6f6ea', borderRadius: 12, padding: 10 }}>
-              <div className="tiny muted" style={{ fontWeight: 700 }}>მოგვიანებით</div>
-              <div style={{ fontWeight: 800 }}>{d.compare.short === 0 ? '☀ ყველა თვე ჯდება' : `${d.compare.short} თვე აკლდება`}</div>
-            </motion.div>
+            {d.compare.cost24 > d.compare.cost && (
+              <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }} className="between" style={{ marginTop: 8, background: '#1f3b57', color: '#fff', borderRadius: 14, padding: '10px 12px' }}>
+                <span className="small">პროცენტი {gel(d.compare.cost)}, არა {gel(d.compare.cost24)}</span>
+                <b style={{ color: '#ffd977', fontSize: 20, whiteSpace: 'nowrap' }}>−{gel(d.compare.cost24 - d.compare.cost)}</b>
+              </motion.div>
+            )}
           </div>
         )}
         <div style={{ display: 'grid', gap: 10 }}>

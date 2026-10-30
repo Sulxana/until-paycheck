@@ -98,28 +98,34 @@ function Payday() {
   )
 }
 
-function YearBars({ rows, cushion }: { rows: CycleRow[]; cushion: number }) {
-  const W = 340, H = 190, L = 34, B = 24, T = 10
-  const vals = rows.flatMap(r => [r.p10, r.p50]).concat([cushion, 0])
-  const lo = Math.min(...vals) - 20, hi = Math.max(...rows.map(r => r.p50), cushion) + 30
+/** monthly net (what one pay cycle adds or eats), so winter deficits are visible instead of hidden by the running balance */
+function YearBars({ rows, cushion, start }: { rows: CycleRow[]; cushion: number; start: number }) {
+  const nets = rows.map((r, i) => r.p50 - (i ? rows[i - 1].p50 : start))
+  const W = 340, H = 200, L = 34, B = 24, T = 18
+  const lo = Math.min(0, ...nets) - 20, hi = Math.max(0, ...nets) + 25
   const y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B)
   const bw = (W - L - 6) / rows.length
-  const col = (p: number) => (p < 0.1 ? '#58b368' : p < 0.3 ? '#f0c419' : p < 0.6 ? '#f08a3c' : '#d9534f')
+  const col = (v: number) => (v < 0 ? '#d9534f' : v < 60 ? '#f0b429' : '#58b368')
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%">
-      <line x1={L} x2={W} y1={y(0)} y2={y(0)} stroke="#d8cfc0" />
-      <text x={L - 5} y={y(0) + 3} fontSize="9" textAnchor="end" fill="#8193a5">0</text>
-      <line x1={L} x2={W} y1={y(cushion)} y2={y(cushion)} stroke="#d9534f" strokeDasharray="4 4" />
-      <text x={L - 5} y={y(cushion) + 3} fontSize="9" textAnchor="end" fill="#d9534f">{cushion}</text>
+      {[lo + 20, 0, hi - 25].map(t => Math.round(t / 50) * 50).filter((t, i, a) => a.indexOf(t) === i).map(t => (
+        <g key={t}>
+          <line x1={L} x2={W} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#c9bfae' : '#efe8dc'} />
+          <text x={L - 5} y={y(t) + 3} fontSize="9" textAnchor="end" fill="#8193a5">{t}</text>
+        </g>
+      ))}
       {rows.map((r, i) => {
+        const v = nets[i]
         const x = L + i * bw + 3
-        const top = Math.min(y(r.p50), y(0)), h = Math.abs(y(r.p50) - y(0))
+        const top = Math.min(y(v), y(0)), h = Math.max(1, Math.abs(y(v) - y(0)))
         const winter = r.uplift >= 80
+        const short = r.p50 < cushion
         return (
           <g key={r.cycleEnd}>
-            {winter && <rect x={x - 2} y={T} width={bw - 2} height={H - T - B} fill="#e8f1fb" />}
-            <line x1={x + bw / 2 - 3} x2={x + bw / 2 - 3} y1={y(r.p10)} y2={y(r.p50)} stroke="#b9c3cf" strokeWidth="1.5" />
-            <motion.rect x={x} width={bw - 6} rx="3" fill={col(r.pBelow)} initial={{ height: 0, y: y(0) }} animate={{ height: h, y: top }} transition={{ delay: i * 0.04, duration: 0.5 }} />
+            {winter && <rect x={x - 2} y={T - 6} width={bw - 2} height={H - T - B + 6} fill="#e8f1fb" rx="4" />}
+            <motion.rect x={x} width={bw - 6} rx="3" fill={col(v)} initial={{ height: 0, y: y(0) }} animate={{ height: h, y: top }} transition={{ delay: i * 0.04, duration: 0.5 }} />
+            <text x={x + bw / 2 - 3} y={v < 0 ? top + h + 10 : top - 4} fontSize="8" fontWeight="700" textAnchor="middle" fill={v < 0 ? '#b4413b' : '#4a5b6d'}>{Math.round(v)}</text>
+            {short && <text x={x + bw / 2 - 3} y={T - 8 + 6} fontSize="9" textAnchor="middle">⚠️</text>}
             <text x={x + bw / 2 - 3} y={H - 8} fontSize="8.5" textAnchor="middle" fill="#8193a5">{r.label.split(' ')[1]}</text>
           </g>
         )
@@ -139,9 +145,9 @@ function Year() {
   return (
     <>
       <div className="card">
-        <div className="h3">ყოველი ხელფასის დღე — 12 თვე</div>
-        <div className="small muted" style={{ margin: '4px 0 8px' }}>ბალანსი ხელფასის დილით (მედიანა), ზოლი — ცუდი სცენარი. ფონი — ზამთარი.</div>
-        <YearBars rows={rows} cushion={e.cushion} />
+        <div className="h3">რამდენი რჩება ყოველ თვეს</div>
+        <div className="small muted" style={{ margin: '4px 0 8px' }}>ხელფასიდან ხელფასამდე, ყველაზე სავარაუდო. ცისფერი ფონი — ზამთარი, ⚠️ — ხელფასამდე ზღვარს ქვემოთ.</div>
+        <YearBars rows={rows} cushion={e.cushion} start={e.landing.p50} />
         <div className="small" style={{ marginTop: 6, fontWeight: 700, color: short.length ? '#b4413b' : 'var(--good)' }}>
           {short.length ? `${short.length} თვე ზღვარს ქვემოთ: ${short.map(s => s.label.split(' ')[1]).join(', ')}` : 'ყველა თვე ზღვარს ზემოთ'}
         </div>

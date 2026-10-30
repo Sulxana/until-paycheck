@@ -6,19 +6,36 @@ import { PERSONAS } from './engine/personas'
 import { Home } from './screens/Home'
 import { Jikho } from './components/Jikho'
 import { Toasts } from './components/ui'
+import { IconRoad, IconChart, IconVillage, IconDay } from './components/Icons'
+import qrcode from 'qrcode-generator'
 
 const Analytics = lazy(() => import('./screens/Analytics').then(m => ({ default: m.Analytics })))
 const Chat = lazy(() => import('./screens/Chat').then(m => ({ default: m.Chat })))
 const Village = lazy(() => import('./screens/Village').then(m => ({ default: m.Village })))
 const Day = lazy(() => import('./screens/Day').then(m => ({ default: m.Day })))
 
-const TABS: { id: Tab; label: string; ico: string }[] = [
-  { id: 'road', label: 'გზა', ico: '🛤️' },
-  { id: 'analytics', label: 'ანალიზი', ico: '📈' },
-  { id: 'chat', label: 'ჯიხო', ico: '' },
-  { id: 'village', label: 'სოფელი', ico: '🏘️' },
-  { id: 'day', label: 'დღე', ico: '☀️' },
+const TABS: { id: Tab; label: string; Ico: ((p: { on?: boolean }) => JSX.Element) | null }[] = [
+  { id: 'road', label: 'გზა', Ico: IconRoad },
+  { id: 'analytics', label: 'ანალიზი', Ico: IconChart },
+  { id: 'chat', label: 'ჯიხო', Ico: null },
+  { id: 'village', label: 'სოფელი', Ico: IconVillage },
+  { id: 'day', label: 'დღე', Ico: IconDay },
 ]
+export const PUBLIC_URL = 'https://claude.ai/artifact/U1Vc8MYDYQk18ZybpEJjy6'
+
+function QR({ text, size = 132 }: { text: string; size?: number }) {
+  const qr = qrcode(0, 'M')
+  qr.addData(text)
+  qr.make()
+  const n = qr.getModuleCount()
+  const cells: string[] = []
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) cells.push(`M${c} ${r}h1v1h-1z`)
+  return (
+    <svg width={size} height={size} viewBox={`-2 -2 ${n + 4} ${n + 4}`} shapeRendering="crispEdges" style={{ background: '#fff', borderRadius: 12 }}>
+      <path d={cells.join('')} fill="#1f3b57" />
+    </svg>
+  )
+}
 
 export function App() {
   const [ready, setReady] = useState(false)
@@ -40,6 +57,10 @@ export function App() {
         <div className="sub">შენი ფულის ამინდის პროგნოზი</div>
         <p>მუშა პროტოტიპი სინთეტიკურ მონაცემებზე. ძრავა ბრაუზერში ითვლის — იგივე seed, იგივე რიცხვები, რაც ჩვენს ცხრილში.</p>
         <p><b>სცადე:</b> „რამის ყიდვა გინდა?" → 100 ₾ · ჯიხოსთან „1200 ლარის ტელეფონი განვადებით" · „⏩ შემდეგი დღე" ხელფასამდე.</p>
+        <div className="row" style={{ gap: 14, margin: '18px 0' }}>
+          <QR text={PUBLIC_URL} />
+          <div className="small">გახსენი<br />ტელეფონზე<br /><span className="muted">სკანირებით</span></div>
+        </div>
         <p className="muted small">ინფორმაციაა, არა რჩევა. ბანკთან კავშირი ჯერ არ არის.</p>
       </aside>
       <div className="phone">
@@ -65,7 +86,7 @@ export function App() {
                   {t.id === 'chat' ? (
                     <span className="bubble"><Jikho size={50} mood={tab === 'chat' ? 'talking' : 'happy'} stage={evolutionStage(game)} bob={false} /></span>
                   ) : (
-                    <span className="ico" style={{ filter: tab === t.id ? 'none' : 'grayscale(0.7)', opacity: tab === t.id ? 1 : 0.7 }}>{t.ico}</span>
+                    <motion.span className="ico" animate={{ y: tab === t.id ? -2 : 0, scale: tab === t.id ? 1.08 : 1 }}>{t.Ico && <t.Ico on={tab === t.id} />}</motion.span>
                   )}
                   {t.label}
                 </button>

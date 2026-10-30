@@ -126,7 +126,7 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
                 {labels[i]?.split(' ')[0]}
               </text>
               {!past && !today && (
-                <text x={p.x} y={p.y - 12} fontSize="10" textAnchor="middle" opacity="0.9">{WICON[weather]}</text>
+                <MiniWeather x={p.x} y={p.y - 17} w={weather} />
               )}
             </g>
           )
@@ -172,6 +172,7 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
         initial={false}
       >
         <motion.div
+          initial={false}
           animate={{ left: `${(here.x / 390) * 100}%`, top: `${(here.y / 290) * 100}%` }}
           transition={{ type: 'spring', stiffness: 60, damping: 14 }}
           style={{ position: 'absolute', transform: 'translate(-50%, -88%)' }}
@@ -183,4 +184,40 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
   )
 }
 
-const WICON: Record<WeatherKind, string> = { sun: '☀', cloud: '☁', rain: '🌧', storm: '⛈' }
+function MiniWeather({ x, y, w }: { x: number; y: number; w: WeatherKind }) {
+  const cloud = (fillC: string) => (
+    <g fill={fillC}>
+      <ellipse cx="0" cy="1" rx="7" ry="3.6" />
+      <circle cx="-2.6" cy="-1" r="3.2" />
+      <circle cx="2.2" cy="-2" r="3.8" />
+    </g>
+  )
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      {w === 'sun' && (
+        <g>
+          <circle r="4.2" fill="#ffc94a" />
+          {[0, 60, 120, 180, 240, 300].map(a => <rect key={a} x="-0.8" y="-7.6" width="1.6" height="2.4" rx="0.8" fill="#ffc94a" transform={`rotate(${a})`} />)}
+        </g>
+      )}
+      {w === 'cloud' && (
+        <g>
+          <circle cx="3.5" cy="-3.5" r="3.4" fill="#ffc94a" />
+          {cloud('#ffffff')}
+        </g>
+      )}
+      {w === 'rain' && (
+        <g>
+          {cloud('#c5d2df')}
+          <path d="M-3 5 l-1 3 M1 5 l-1 3 M5 5 l-1 3" stroke="#4f7cff" strokeWidth="1.3" strokeLinecap="round" />
+        </g>
+      )}
+      {w === 'storm' && (
+        <g>
+          {cloud('#7f8ea6')}
+          <path d="M0.5 3 l-2.6 4 h2.2 l-1.4 3.6 l4 -5 h-2.2 l1.4 -2.6 z" fill="#ffd166" />
+        </g>
+      )}
+    </g>
+  )
+}

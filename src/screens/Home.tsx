@@ -7,6 +7,8 @@ import { Jikho, JikhoMood } from '../components/Jikho'
 import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI } from '../components/ui'
 import { BANK_META, PERSONAS } from '../engine/personas'
 import { WeatherKind, WEATHER_LABEL } from '../engine/engine'
+import { TowerPlace } from '../components/village/Places'
+import { Confetti } from '../components/day/parts'
 
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
@@ -328,7 +330,8 @@ function Ceremony() {
     <AnimatePresence>
       {c && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'absolute', inset: 0, zIndex: 30, background: c.safe ? 'linear-gradient(180deg,#ffe9a8,#fff8e6 55%)' : 'linear-gradient(180deg,#dfe8f1,#f6f8fb 55%)', overflowY: 'auto', padding: '30px 18px 24px' }}>
-          <div style={{ textAlign: 'center' }}>
+          {c.safe && <Confetti n={28} />}
+          <div style={{ textAlign: 'center', position: 'relative' }}>
             <motion.div initial={{ scale: 0.3, y: 40 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', damping: 10 }}>
               <Jikho size={150} mood={c.safe ? 'celebrate' : 'calm'} stage={evolutionStage(game)} accessories={game.equipped} />
             </motion.div>
@@ -342,9 +345,15 @@ function Ceremony() {
 
           <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
             {c.safe && (
-              <motion.div className="card row" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }}>
-                <Tower stones={game.stones} />
-                <div><div className="h3">კოშკს ახალი ქვა დაემატა</div><div className="small muted">{game.stones} უსაფრთხო ჩასვლა · 12 = სახურავი</div></div>
+              <motion.div className="card row" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }} style={{ gap: 16 }}>
+                <div style={{ width: 92, height: 160, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#8fd0ff,#e4f5ff 70%,#9fd39c 70%)', flexShrink: 0 }}>
+                  <svg viewBox="-4 70 84 156" width="92" height="160"><TowerPlace stones={game.stones} /></svg>
+                </div>
+                <div>
+                  <div className="h3">კოშკს ახალი ქვა დაემატა</div>
+                  <div style={{ fontSize: 34, fontWeight: 800, margin: '4px 0' }}>{game.stones}<span className="muted" style={{ fontSize: 18 }}>/12</span></div>
+                  <div className="small muted">უსაფრთხო ჩასვლა. ქვა არასდროს იკარგება · 12 = სახურავი და დროშა</div>
+                </div>
               </motion.div>
             )}
             <motion.div className="card row" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
