@@ -22,6 +22,15 @@ const TABS: { id: Tab; label: string; Ico: ((p: { on?: boolean }) => JSX.Element
   { id: 'day', label: 'დღე', Ico: IconDay },
 ]
 export const PUBLIC_URL = 'https://claude.ai/artifact/U1Vc8MYDYQk18ZybpEJjy6'
+/** on a public host (e.g. Vercel) the QR points to the site itself; locally and inside claude.ai it falls back */
+function qrUrl() {
+  try {
+    const { protocol, hostname, origin } = window.location
+    const local = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local')
+    if (protocol === 'https:' && !local && !hostname.includes('claude')) return origin
+  } catch { /* ignore */ }
+  return PUBLIC_URL
+}
 
 function QR({ text, size = 132 }: { text: string; size?: number }) {
   const qr = qrcode(0, 'M')
@@ -64,7 +73,7 @@ export function App() {
           <li><b>⏩ შემდეგი დღე</b> — ხელფასამდე</li>
         </ol>
         <div className="row" style={{ gap: 14, margin: '18px 0' }}>
-          <QR text={PUBLIC_URL} />
+          <QR text={qrUrl()} />
           <div className="small">გახსენი<br />ტელეფონზე<br /><span className="muted">სკანირებით</span></div>
         </div>
         <p className="muted small">ინფორმაციაა, არა რჩევა. ბანკთან კავშირი ჯერ არ არის.</p>
