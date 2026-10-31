@@ -28,6 +28,17 @@ export function Chat() {
   useEffect(() => { if (useStore.getState().chats[p.id].length === 0) push(greeting(p)) }, [p.id])
   useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }) }, [msgs.length, typing])
 
+  // the side panel next to the phone can ask Jikho a question
+  const cue = useStore(s => s.cue)
+  useEffect(() => {
+    const c = useStore.getState().takeCue(['ask'])
+    if (!c?.texts?.length) return
+    const [first, ...rest] = c.texts
+    const needsCtx = rest.length > 0 && (ctxByPersona[p.id]?.kind ?? null) === 'installment'
+    const queue = needsCtx ? rest : [first, ...rest]
+    queue.forEach((q, i) => setTimeout(() => send(q), 400 + i * 4200))
+  }, [cue?.n])
+
   const send = (raw: string) => {
     const t = raw.trim()
     if (!t || typing) return

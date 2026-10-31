@@ -79,6 +79,14 @@ export function Home() {
 
   const step = () => advanceDay(v.nDays, (day, extra) => ({ landing: Math.round(e.forecastAtDay(day, idx, extra).balance), cushion: e.cushion }))
 
+  // the side panel next to the phone can open the purchase check or step a day
+  const cue = useStore(s => s.cue)
+  useEffect(() => {
+    const c = useStore.getState().takeCue(['buy', 'next'])
+    if (!c) return
+    setTimeout(() => { if (c.kind === 'buy') setBuyOpen(true); else { setBuyOpen(false); step() } }, 250)
+  }, [cue?.n])
+
   return (
     <div className="screen" style={{ background: 'var(--paper)' }}>
       {/* top bar over the scene */}

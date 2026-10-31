@@ -32,6 +32,13 @@ function qrUrl() {
   return PUBLIC_URL
 }
 
+const TRY_STEPS: { title: string; hint: string; tab: Tab; kind: 'buy' | 'ask' | 'next'; texts?: string[] }[] = [
+  { title: 'ყიდვამდე შეამოწმე', hint: '100 ₾ — როგორ იცვლება ამინდი', tab: 'road', kind: 'buy' },
+  { title: 'ტელეფონი განვადებით', hint: 'ჯიხო 1 200 ₾-ს დაითვლის', tab: 'chat', kind: 'ask', texts: ['1 200 ₾-ის ტელეფონი განვადებით'] },
+  { title: 'აპრილამდე რომ დაიცადო?', hint: 'ახლა თუ აპრილში — შედარება', tab: 'chat', kind: 'ask', texts: ['1 200 ₾-ის ტელეფონი განვადებით', 'და თუ აპრილამდე დავიცადო?'] },
+  { title: 'შემდეგი დღე', hint: 'გაიარე გზა ხელფასამდე', tab: 'road', kind: 'next' },
+]
+
 function QR({ text, size = 132 }: { text: string; size?: number }) {
   const qr = qrcode(0, 'M')
   qr.addData(text)
@@ -54,6 +61,16 @@ export function App() {
   const game = useStore(s => s.games[s.personaId])
   const gameOff = useStore(s => s.gameOff)
 
+  // the "try it" steps beside the phone run the demo on the phone itself
+  const [tried, setTried] = useState<number[]>([])
+  const runStep = (i: number) => {
+    const st = TRY_STEPS[i]
+    const n = Date.now()
+    setTab(st.tab)
+    useStore.getState().setCue(st.kind === 'ask' ? { kind: 'ask', texts: st.texts, n } : { kind: st.kind, n })
+    setTried(t => (t.includes(i) ? t : [...t, i]))
+  }
+
   useEffect(() => {
     const t = setTimeout(() => { getEngine(PERSONAS.find(p => p.id === personaId)!); setReady(true) }, 60)
     return () => clearTimeout(t)
@@ -62,22 +79,44 @@ export function App() {
   return (
     <div className="stage">
       <aside className="side">
-        <Jikho size={84} mood="happy" stage={1} accessories={['scarf']} />
-        <h1 style={{ fontSize: 34, marginTop: 6 }}>ხელფასამდე</h1>
-        <div className="sub" style={{ fontSize: 15 }}>შენი ფულის ამინდის პროგნოზი</div>
-        <p>მუშა პროტოტიპი გამოგონილ მონაცემებზე. ყველა რიცხვი ფორმულით ითვლება.</p>
-        <div style={{ fontWeight: 800, marginTop: 10 }}>სცადე:</div>
-        <ol style={{ paddingLeft: 18, margin: '6px 0 10px', display: 'grid', gap: 6 }}>
-          <li><b>გზა:</b> „ყიდვამდე შეამოწმე" → 100 ₾</li>
-          <li><b>ჯიხო:</b> „1 200 ₾-ის ტელეფონი განვადებით"</li>
-          <li><b>ჯიხო:</b> „და თუ აპრილამდე დავიცადო?"</li>
-          <li><b>⏩ შემდეგი დღე</b> — ხელფასამდე</li>
-        </ol>
-        <div className="row" style={{ gap: 14, margin: '18px 0' }}>
-          <QR text={qrUrl()} />
-          <div className="small">გახსენი<br />ტელეფონზე<br /><span className="muted">სკანირებით</span></div>
+        <div className="row" style={{ gap: 12, alignItems: 'center' }}>
+          <Jikho size={64} mood="happy" stage={1} accessories={['scarf']} bob={false} />
+          <div>
+            <h1 style={{ fontSize: 30, margin: 0 }}>ხელფასამდე</h1>
+            <div className="sub" style={{ margin: 0 }}>შენი ფულის ამინდის პროგნოზი</div>
+          </div>
         </div>
-        <p className="muted small">ინფორმაციაა, არა რჩევა. ბანკთან კავშირი ჯერ არ არის.</p>
+
+        <div className="try">
+          <div className="try-head">
+            <span>სცადე</span>
+            <span className="try-tip">დააჭირე და ტელეფონზე გაიხსნება</span>
+          </div>
+          {TRY_STEPS.map((st, i) => {
+            const isDone = tried.includes(i)
+            const isNext = i === TRY_STEPS.findIndex((_, k) => !tried.includes(k))
+            return (
+              <motion.button key={st.title} whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }} className={'try-step' + (isDone ? ' done' : '') + (isNext ? ' next' : '')} onClick={() => runStep(i)}>
+                <span className="try-num">{isDone ? '✓' : i + 1}</span>
+                <span className="try-text">
+                  <b>{st.title}</b>
+                  <span>{st.hint}</span>
+                </span>
+                <span className="try-go">›</span>
+              </motion.button>
+            )
+          })}
+        </div>
+
+        <div className="try-qr">
+          <QR text={qrUrl()} size={96} />
+          <div>
+            <b>გახსენი ტელეფონზე</b>
+            <div className="muted small">კამერით დაასკანერე</div>
+          </div>
+        </div>
+
+        <p className="try-foot">მუშა პროტოტიპი გამოგონილ მონაცემებზე. ინფორმაციაა, არა რჩევა. ბანკთან კავშირი ჯერ არ არის.</p>
       </aside>
       <div className="phone">
         <Toasts />

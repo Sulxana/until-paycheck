@@ -88,6 +88,11 @@ interface Store {
   tab: Tab
   analyticsSeg: 'payday' | 'spend' | 'points'
   setAnalyticsSeg: (s: 'payday' | 'spend' | 'points') => void
+  /** one-shot action sent from the side panel to the phone: open the purchase check, ask Jikho, or step a day */
+  cue: null | { kind: 'buy' | 'ask' | 'next'; texts?: string[]; n: number }
+  setCue: (c: Store['cue']) => void
+  /** returns the pending cue if it is one of `kinds` and clears it, so it runs only once */
+  takeCue: (kinds: ('buy' | 'ask' | 'next')[]) => Store['cue']
   games: Record<PersonaId, Game>
   demos: Record<PersonaId, Demo>
   chats: Record<PersonaId, ChatMsg[]>
@@ -155,6 +160,14 @@ export const useStore = create<Store>()(
         tab: 'road',
         analyticsSeg: 'payday',
         setAnalyticsSeg: seg => set({ analyticsSeg: seg }),
+        cue: null,
+        setCue: c => set({ cue: c }),
+        takeCue: kinds => {
+          const c = get().cue
+          if (!c || !kinds.includes(c.kind)) return null
+          set({ cue: null })
+          return c
+        },
         games: byId(initialGame),
         demos: byId(initialDemo),
         chats: byId(() => []),
