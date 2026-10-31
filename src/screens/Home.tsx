@@ -89,6 +89,9 @@ export function Home() {
           {!gameOff && (
             <span className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} title="სერია">{v.hardship ? '❄ გაყინულია' : `🏮 ${game.streak}`}</span>
           )}
+          {!gameOff && (
+            <button className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} onClick={() => { setTab('analytics'); useStore.getState().setAnalyticsSeg('points') }} title="ქულები და კუპონები" aria-label="ქულები და კუპონები">⭐ {game.points ?? 0} ქულა</button>
+          )}
           <button className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} onClick={() => setSettingsOpen(true)} aria-label="პარამეტრები">⚙️</button>
         </div>
       </div>
@@ -366,6 +369,9 @@ function Ceremony() {
             </motion.div>
             <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{c.safe ? 'ჩავედით! 🎉' : 'ჩავედით ხელფასამდე'}</div>
             <div className="muted" style={{ marginTop: 4 }}>{p.paydayLabel} · ხელფასის დილით</div>
+            {(c.pts ?? 0) > 0 && (
+              <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.4 }} className="chip" style={{ marginTop: 8, background: '#fff3c4', color: '#7a5a00', fontWeight: 800, padding: '6px 12px' }}>⭐ +{c.pts} ქულა · თვე გეგმით გაიარე</motion.div>
+            )}
             <div className="big" style={{ marginTop: 12 }}>{gel(c.landing)}</div>
             <div className="small" style={{ marginTop: 6, fontWeight: 700, color: c.safe ? 'var(--good)' : 'var(--ink-2)' }}>
               {c.safe ? `უსაფრთხო ზღვარზე ${gel(c.landing - c.cushion)}-ით მეტი. კარგი ჩასვლაა!` : `ამჯერად უსაფრთხო ზღვარს (${gel(c.cushion)}) ქვემოთ ჩახვედი. არაფერი იკარგება.`}
@@ -397,7 +403,7 @@ function Ceremony() {
             )}
             <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>
               <div className="h3">ხელფასი ჩამოვიდა: +{gel(p.salary)}</div>
-              {p.savings && !pledged && (
+              {p.savings && !(pledged || game.pledged) && (
                 <>
                   <div className="small muted" style={{ margin: '4px 0 10px' }}>გადავდოთ ნაწილი დანაზოგში „{p.savings.name}"?</div>
                   <div className="row">
@@ -406,7 +412,7 @@ function Ceremony() {
                   </div>
                 </>
               )}
-              {pledged && <div className="small" style={{ marginTop: 6 }}>✓ შენი გადაწყვეტილება ჩაიწერა</div>}
+              {(pledged || game.pledged) && <div className="small" style={{ marginTop: 6 }}>✓ შენი გადაწყვეტილება ჩაიწერა</div>}
             </motion.div>
             {game.pendingChoice && (
               <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>

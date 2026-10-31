@@ -6,26 +6,30 @@ import { FanChart } from '../components/FanChart'
 import { Disclaimer } from '../components/ui'
 import { BANK_META } from '../engine/personas'
 import { CycleRow, Engine, KA_MONTHS_FULL } from '../engine/engine'
+import { Points } from '../components/points/Points'
 
-type Seg = 'payday' | 'year' | 'spend'
+type Seg = 'payday' | 'spend' | 'points'
 
 export function Analytics() {
-  const [seg, setSeg] = useState<Seg>('payday')
+  const gameOff = useStore(st => st.gameOff)
+  const raw = useStore(st => st.analyticsSeg) as Seg
+  const seg: Seg = gameOff && raw === 'points' ? 'payday' : raw
+  const setSeg = useStore(st => st.setAnalyticsSeg)
   return (
     <div className="screen" style={{ background: 'var(--paper)' }}>
       <div className="pad" style={{ paddingTop: 18 }}>
         <h2 className="h2" style={{ fontSize: 26 }}>ანალიზი</h2>
         <div className="small muted" style={{ marginTop: 2 }}>შენი ფული უბრალო სიტყვებით</div>
         <div className="seg" style={{ marginTop: 12 }}>
-          {([['payday', 'ხელფასამდე'], ['year', 'მთელი წელი'], ['spend', 'ხარჯები']] as [Seg, string][]).map(([k, l]) => (
+          {([['payday', 'ხელფასამდე'], ['spend', 'ხარჯები'], ['points', 'ქულები']] as [Seg, string][]).filter(([k]) => !(gameOff && k === 'points')).map(([k, l]) => (
             <button key={k} className={seg === k ? 'on' : ''} onClick={() => setSeg(k)}>{l}</button>
           ))}
         </div>
       </div>
       <motion.div key={seg} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="pad" style={{ paddingTop: 12, paddingBottom: 20, display: 'grid', gap: 12 }}>
         {seg === 'payday' && <Payday />}
-        {seg === 'year' && <Year />}
         {seg === 'spend' && <Spend />}
+        {seg === 'points' && <Points />}
       </motion.div>
       <Disclaimer />
       <div style={{ height: 12 }} />
@@ -96,6 +100,8 @@ function Payday() {
         </div>
       </Insight>
 
+      <Year compact />
+
       <Insight kicker="გადასახადები" title="ხელფასამდე ეს გადასახადები გელის" legend="ყოველი დადასტურება პროგნოზს აზუსტებს.">
         <div style={{ display: 'grid', gap: 8 }}>
           {p.due.map(d => {
@@ -156,7 +162,7 @@ function YearBars({ rows, start }: { rows: CycleRow[]; start: number }) {
   )
 }
 
-function Year() {
+function Year({ compact }: { compact?: boolean }) {
   const v = useToday()
   const { e } = v
   const [pledge, setPledge] = useState(false)
@@ -173,19 +179,19 @@ function Year() {
   return (
     <>
       <Insight
-        kicker="მთელი წელი"
+        kicker="წინ რთული თვეები"
         title={worst < 0 ? <>ყველაზე რთული თვე <span style={{ color: '#b4413b' }}>{worstMonth}ა: {fmt(worst)} ₾</span></> : <>ყოველ თვეს რაღაც რჩება. ყველაზე ცოტა — {stem}ში</>}
         legend={<>სვეტი აჩვენებს, რამდენი რჩება ერთი ხელფასიდან მეორემდე. მწვანე — კარგად რჩება, ყვითელი — ცოტა, წითელი — თვე მინუსშია. {short.length ? `ზღვარს ქვემოთ ჩადიხარ: ${short.map(s => s.label.split(' ')[1]).join(', ')}.` : ''} ეს ვარაუდია: ბოლო თვეების ხარჯს და შარშანდელ ზამთარს ვიმეორებთ.</>}
       >
         <YearBars rows={rows} start={e.landing.p50} />
       </Insight>
-      <Insight kicker="რა მოხდება, თუ…" title="სცადე და ნახე, როგორ შეიცვლება წელი">
+      {!compact && <Insight kicker="რა მოხდება, თუ…" title="სცადე და ნახე, როგორ შეიცვლება წელი">
         <div style={{ display: 'grid', gap: 8 }}>
           <Toggle on={pledge} set={setPledge} title="ყოველ ხელფასზე 100 ₾ გადავდებ" sub="დანაზოგში, ხელფასის დღესვე" />
           <Toggle on={delivery} set={setDelivery} title="მიწოდებასა და კაფეზე 20%-ით ნაკლებს დავხარჯავ" sub={`თვეში დაახლოებით ${gel(deliveryCut)}`} />
         </div>
         {pledge && short.length > 0 && <div className="small" style={{ marginTop: 10, background: '#fff4dc', borderRadius: 12, padding: '10px 12px' }}>ზამთარში, 100 ₾-ის გადადებით, ზღვარს ქვემოთ ჩადიხარ. ბევრი ადამიანი დეკემბრიდან მარტამდე გადადებას ამცირებს.</div>}
-      </Insight>
+      </Insight>}
     </>
   )
 }

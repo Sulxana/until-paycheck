@@ -97,7 +97,7 @@ export function App() {
             </AnimatePresence>
             <nav className="nav">
               {TABS.filter(t => !(gameOff && t.id === 'village')).map(t => (
-                <button key={t.id} className={(tab === t.id ? 'on ' : '') + (t.id === 'chat' ? 'center' : '')} onClick={() => setTab(t.id)}>
+                <button key={t.id} className={(tab === t.id ? 'on ' : '') + (t.id === 'chat' ? 'center' : '')} onClick={() => { if (t.id === 'analytics' && tab !== 'analytics') useStore.getState().setAnalyticsSeg('payday'); setTab(t.id) }}>
                   {t.id === 'chat' ? (
                     <span className="bubble"><Jikho size={50} mood={tab === 'chat' ? 'talking' : 'happy'} stage={evolutionStage(game)} bob={false} /></span>
                   ) : (

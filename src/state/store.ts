@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { PERSONAS, Persona } from '../engine/personas'
 import type { Accessory } from '../components/Jikho'
 import type { TopicId } from '../content/lessons'
+import { PARTNERS, type Interest } from '../content/partners'
 
 export type Tab = 'road' | 'analytics' | 'chat' | 'village' | 'day'
 export type PersonaId = Persona['id']
@@ -19,6 +20,14 @@ export interface Game {
   checks: { label: string; score: number }[]
   /** rules collected from micro-lessons ("ჩემი წესები") */
   rules: TopicId[]
+  /** points earned only by good actions; spent on partner coupons */
+  points: number
+  pointsLog: { label: string; pts: number }[]
+  coupons: { partnerId: string; code: string; at: string }[]
+  interests: Interest[]
+  checkupToday: boolean
+  /** the payday savings decision was already made this cycle */
+  pledged: boolean
 }
 export const CHECK_MAX = 6
 const MASTERY: Record<PersonaId, Record<TopicId, number>> = {
@@ -31,7 +40,7 @@ const FIRST_CHECK: Record<PersonaId, { label: string; score: number }> = {
   luka: { label: '15 ოქტ', score: 2 },
   tamar: { label: '5 ოქტ', score: 3 },
 }
-export interface Demo { day: number; extra: number; ceremony: null | { landing: number; safe: boolean; cushion: number }; finished: boolean }
+export interface Demo { day: number; extra: number; ceremony: null | { landing: number; safe: boolean; cushion: number; pts?: number }; finished: boolean }
 export interface ChatCard { kind: 'purchase' | 'installment' | 'forecast' | 'concept' | 'safe' | 'compare'; data: any }
 export interface ChatMsg { id: string; from: 'jikho' | 'user'; text: string; card?: ChatCard; chips?: string[] }
 export interface Toast { id: number; icon: string; text: string }
@@ -56,6 +65,9 @@ function initialGame(p: Persona): Game {
     cosmetics: p.id === 'nino' ? ['scarf', 'backpack', 'umbrella'] : ['backpack'], equipped: p.id === 'nino' ? ['scarf'] : [],
     pendingChoice: null, confirmed: [], beatGuess: null, questsDone: [], lessonCursor: 0, landmarksSeen: g.cycles,
     mastery: { ...MASTERY[p.id] }, checks: [FIRST_CHECK[p.id]], rules: p.id === 'nino' ? ['M1', 'M7'] : [],
+    points: { nino: 24, luka: 18, tamar: 26 }[p.id], pointsLog: [], coupons: [],
+    // interests start empty: only the user picks them, never inferred from spending
+    interests: [], checkupToday: false, pledged: false,
   }
 }
 const initialDemo = (): Demo => ({ day: 0, extra: 0, ceremony: null, finished: false })
@@ -71,6 +83,8 @@ export function evolutionStage(g: Game): 0 | 1 | 2 | 3 {
 interface Store {
   personaId: PersonaId
   tab: Tab
+  analyticsSeg: 'payday' | 'spend' | 'points'
+  setAnalyticsSeg: (s: 'payday' | 'spend' | 'points') => void
   games: Record<PersonaId, Game>
   demos: Record<PersonaId, Demo>
   chats: Record<PersonaId, ChatMsg[]>
@@ -97,6 +111,9 @@ interface Store {
   microDone: (topic: TopicId) => void
   /** a finished knowledge check */
   checkupDone: (score: number, label: string) => void
+  /** exchange a partner's point price for its coupon */
+  redeem: (partnerId: string, dateLabel: string) => string | null
+  toggleInterest: (i: Interest) => void
 }
 
 const ids = PERSONAS.map(p => p.id)
@@ -111,6 +128,11 @@ export const useStore = create<Store>()(
         const g = get().games[id]
         set({ games: { ...get().games, [id]: { ...g, ...fn(g) } } })
       }
+      const earn = (pts: number, label: string) => {
+        if (get().gameOff) return '' // game off: no points layer at all
+        patchGame(gg => ({ points: (gg.points ?? 0) + pts, pointsLog: [{ label, pts }, ...(gg.pointsLog ?? [])].slice(0, 30) }))
+        return ` · +${pts} ქულა`
+      }
       const lightStreak = () => {
         const g = get().games[get().personaId]
         if (g.litToday) return null
@@ -121,6 +143,8 @@ export const useStore = create<Store>()(
       return {
         personaId: 'nino',
         tab: 'road',
+        analyticsSeg: 'payday',
+        setAnalyticsSeg: seg => set({ analyticsSeg: seg }),
         games: byId(initialGame),
         demos: byId(initialDemo),
         chats: byId(() => []),
@@ -140,7 +164,8 @@ export const useStore = create<Store>()(
           if (kind === 'check') {
             if (g.checksToday >= 3) { if (!off) get().toast('🪵', 'დღეს ხიდზე 3 ფიცარი უკვე დადე — ხვალ გააგრძელე'); return }
             patchGame(gg => ({ planks: gg.planks + 1, checksToday: gg.checksToday + 1 }))
-            if (!off) get().toast('🪵', `+1 ფიცარი ხიდზე — ყიდვამდე შემოწმებისთვის`)
+            const pt = earn(3, 'შემოწმება ყიდვამდე')
+            if (!off) get().toast('🪵', `+1 ფიცარი ხიდზე${pt}`)
             if (g.checksToday + 1 === 3 && !g.questsDone.includes('three-checks')) {
               patchGame(gg => ({ questsDone: [...gg.questsDone, 'three-checks'] }))
               setTimeout(() => get().toast('🏅', 'დავალება შესრულდა: „სამი შემოწმება შესყიდვამდე"'), 700)
@@ -150,7 +175,8 @@ export const useStore = create<Store>()(
             const topicUp = books % 6 === 0
             patchGame(gg => ({ books, topics: topicUp ? gg.topics + 1 : gg.topics, morningDone: true, lessonCursor: gg.lessonCursor + 3 }))
             const s = lightStreak()
-            if (!off) get().toast('📗', `+1 წიგნი სკოლაში${s ? ` · სერია ${s} დღე` : ''}`)
+            const pt = earn(10, 'დილის 3 კითხვა')
+            if (!off) get().toast('📗', `+1 წიგნი სკოლაში${s ? ` · სერია ${s} დღე` : ''}${pt}`)
             if (topicUp && !off) setTimeout(() => get().toast('🏫', 'სკოლაში ახალი ოთახი: თემა ათვისებულია'), 800)
             if (!g.pendingChoice && !off) {
               const pool = COSMETIC_POOL.map(c => c.id).filter(c => !g.cosmetics.includes(c))
@@ -161,20 +187,25 @@ export const useStore = create<Store>()(
             const xp = g.stationXp + 1
             const up = xp >= 3 && g.station < 5
             patchGame(gg => ({ confirmed: [...gg.confirmed, payload], stationXp: up ? 0 : xp, station: up ? gg.station + 1 : gg.station }))
-            if (!off) get().toast('📡', up ? `ამინდის სადგური ${g.station + 1}/5 — პროგნოზი უფრო ზუსტი ხდება` : `დადასტურდა: ${payload} · სადგური ${xp}/3`)
+            const pt = earn(2, `პროგნოზის დაზუსტება: ${payload}`)
+            if (!off) get().toast('📡', up ? `ამინდის სადგური ${g.station + 1}/5 — პროგნოზი უფრო ზუსტი ხდება${pt}` : `დადასტურდა: ${payload}${pt}`)
           } else if (kind === 'save') {
+            if (g.pledged) return
             const amount = payload as number
             patchGame(gg => {
               const q = gg.qvevri.map((x, i) => (i === 0 ? { ...x, filled: Math.min(x.target, x.filled + amount), sealedAt: x.filled + amount >= x.target ? 'ნოემბერი 2026' : x.sealedAt } : x))
-              return { qvevri: q }
+              return { qvevri: q, pledged: true }
             })
             const q0 = get().games[get().personaId].qvevri[0]
-            if (!off && q0) get().toast('🏺', q0.sealedAt ? `ქვევრი „${q0.name}" დაილუქა!` : `+${amount} ₾ ქვევრში „${q0.name}" · ${q0.filled}/${q0.target}`)
+            const pt = earn(10, 'დანაზოგის გადადება')
+            if (!off && q0) get().toast('🏺', q0.sealedAt ? `ქვევრი „${q0.name}" დაილუქა!${pt}` : `+${amount} ₾ ქვევრში „${q0.name}"${pt}`)
           } else if (kind === 'evening') {
             patchGame(() => ({ eveningDone: true }))
-            if (!off) get().toast('🌙', 'დღე დაიხურა · ხვალ დილით — ახალი ამინდი')
+            const pt = earn(5, 'დღის დახურვა')
+            if (!off) get().toast('🌙', `დღე დაიხურა${pt}`)
           } else if (kind === 'beat') {
-            if (!off) get().toast('🎯', payload)
+            const pt = earn(5, 'კვირის გამოწვევა')
+            if (!off) get().toast('🎯', `${payload}${pt}`)
           }
         },
         advanceDay: (nDays, landingFn) => {
@@ -185,10 +216,16 @@ export const useStore = create<Store>()(
           if (day >= nDays) {
             const { landing, cushion } = landingFn(day, d.extra)
             const safe = landing >= cushion
-            set({ demos: { ...get().demos, [id]: { ...d, day, ceremony: { landing, safe, cushion } } } })
-            patchGame(gg => ({ cycles: gg.cycles + 1, stones: safe ? gg.stones + 1 : gg.stones, pendingChoice: safe && !gg.pendingChoice ? COSMETIC_POOL.map(c => c.id).filter(c => !gg.cosmetics.includes(c)).slice(0, 3) : gg.pendingChoice }))
+            // +20 rewards following the plan this month (behaviour), never the balance itself
+            const gNow = get().games[id]
+            const base = initialGame(PERSONAS.find(x => x.id === id)!)
+            const followed = gNow.planks > base.planks || gNow.confirmed.length > 0 || gNow.books > base.books || gNow.rules.length > base.rules.length
+            const pts = followed && !get().gameOff ? 20 : 0
+            if (pts) earn(pts, 'ხელფასამდე მიღწევა გეგმით')
+            set({ demos: { ...get().demos, [id]: { ...d, day, ceremony: { landing, safe, cushion, pts } } } })
+            patchGame(gg => ({ pledged: false, cycles: gg.cycles + 1, stones: safe ? gg.stones + 1 : gg.stones, pendingChoice: safe && !gg.pendingChoice ? COSMETIC_POOL.map(c => c.id).filter(c => !gg.cosmetics.includes(c)).slice(0, 3) : gg.pendingChoice }))
           } else {
-            set({ demos: { ...get().demos, [id]: { ...d, day } }, games: { ...get().games, [id]: { ...get().games[id], checksToday: 0, litToday: false, morningDone: false, eveningDone: false, questsDone: [] } } })
+            set({ demos: { ...get().demos, [id]: { ...d, day } }, games: { ...get().games, [id]: { ...get().games[id], checksToday: 0, litToday: false, morningDone: false, eveningDone: false, questsDone: [], checkupToday: false } } })
           }
         },
         buy: amount => {
@@ -232,14 +269,25 @@ export const useStore = create<Store>()(
           const g = get().games[get().personaId]
           const fresh = !g.rules.includes(topic)
           patchGame(gg => ({ rules: fresh ? [...gg.rules, topic] : gg.rules, mastery: { ...gg.mastery, [topic]: Math.min(100, (gg.mastery[topic] ?? 0) + 8) } }))
-          if (fresh) get().toast('📗', 'ახალი წესი „ჩემს წესებში" ჩაიწერა')
+          if (fresh) { const pt = earn(5, '30-წამიანი გაკვეთილი'); get().toast('📗', `ახალი წესი დაემატა „ჩემს წესებში"${pt}`) }
         },
         checkupDone: (score, label) => {
           const g = get().games[get().personaId]
           const first = g.checks[0]?.score ?? 0
-          patchGame(gg => ({ checks: [...gg.checks, { label, score }] }))
-          get().toast('🎓', score > first ? `ცოდნის ქულა: ${first} → ${score} (${CHECK_MAX}-დან)` : `ცოდნის ქულა: ${score}/${CHECK_MAX}`)
+          patchGame(gg => ({ checks: [...gg.checks, { label, score }], checkupToday: true }))
+          const pt = g.checkupToday ? '' : earn(15, 'ცოდნის შემოწმება')
+          get().toast('🎓', (score > first ? `ცოდნა: ${first} → ${score} (${CHECK_MAX}-დან)` : `ცოდნა: ${score}/${CHECK_MAX}`) + pt)
         },
+        redeem: (partnerId, dateLabel) => {
+          const g = get().games[get().personaId]
+          const partner = PARTNERS.find(x => x.id === partnerId)
+          if (!partner || get().gameOff || (g.points ?? 0) < partner.cost) return null
+          const n = (g.coupons?.length ?? 0) + 1
+          const code = `KH-${partnerId.slice(0, 3).toUpperCase()}-${1000 + ((n * 7919 + partnerId.length * 131) % 9000)}`
+          patchGame(gg => ({ points: gg.points - partner.cost, coupons: [{ partnerId, code, at: dateLabel }, ...(gg.coupons ?? [])], pointsLog: [{ label: `კუპონი: ${partner?.name ?? ''}`, pts: -partner.cost }, ...(gg.pointsLog ?? [])].slice(0, 30) }))
+          return code
+        },
+        toggleInterest: i => patchGame(gg => { const cur = gg.interests ?? []; return { interests: cur.includes(i) ? cur.filter(x => x !== i) : [...cur, i] } }),
       }
     },
     {
@@ -248,10 +296,16 @@ export const useStore = create<Store>()(
         try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return localStorage } catch { const m = new Map<string, string>(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v), removeItem: k => void m.delete(k) } }
       }),
       partialize: s => ({ personaId: s.personaId, games: s.games, demos: s.demos, chats: s.chats, gameOff: s.gameOff }),
-      version: 2,
+      version: 4,
       // v1 saves lack the learning fields: keep progress, fill the gaps from the persona defaults
-      migrate: (old: any) => {
-        const games = Object.fromEntries(PERSONAS.map(p => [p.id, { ...initialGame(p), ...(old?.games?.[p.id] ?? {}) }]))
+      // v3 saves: interests were pre-filled and could hold the removed bank offer; clean both
+      migrate: (old: any, version: number) => {
+        const games = Object.fromEntries(PERSONAS.map(p => {
+          const g = { ...initialGame(p), ...(old?.games?.[p.id] ?? {}) }
+          if (version < 4) g.interests = []
+          g.coupons = (g.coupons ?? []).filter((c: any) => PARTNERS.some(x => x.id === c.partnerId))
+          return [p.id, g]
+        }))
         return { ...old, games } as any
       },
     },

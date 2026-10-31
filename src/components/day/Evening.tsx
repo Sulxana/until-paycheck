@@ -61,7 +61,7 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
   }
   const confirmBolt = (yes: boolean) => {
     setBolt(localKey, yes ? 'yes' : 'no')
-    if (yes) reward('confirm', 'Bolt')
+    reward('confirm', 'Bolt') // both answers sharpen the forecast, so both earn the same
   }
   const close = () => {
     if (!game.eveningDone) reward('evening')
