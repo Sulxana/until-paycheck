@@ -21,7 +21,7 @@ const TABS: { id: Tab; label: string; Ico: ((p: { on?: boolean }) => JSX.Element
   { id: 'village', label: 'სოფელი', Ico: IconVillage },
   { id: 'day', label: 'დღე', Ico: IconDay },
 ]
-export const PUBLIC_URL = 'https://claude.ai/artifact/U1Vc8MYDYQk18ZybpEJjy6'
+export const PUBLIC_URL = 'https://until-paycheck.vercel.app/'
 /** on a public host (e.g. Vercel) the QR points to the site itself; locally and inside claude.ai it falls back */
 function qrUrl() {
   try {
