@@ -141,4 +141,3 @@ input { font: inherit; color: inherit; }
 .try-go { color: var(--ink-3); font-size: 20px; font-weight: 700; }
 .try-qr { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding: 10px; border-radius: 16px; background: rgba(255, 255, 255, 0.6); }
 .try-qr b { color: var(--navy); }
-.try-foot { margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--ink-3); }

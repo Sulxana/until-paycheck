@@ -116,7 +116,6 @@ export function App() {
           </div>
         </div>
 
-        <p className="try-foot">მუშა პროტოტიპი გამოგონილ მონაცემებზე. ინფორმაციაა, არა რჩევა. ბანკთან კავშირი ჯერ არ არის.</p>
       </aside>
       <div className="phone">
         <Toasts />
