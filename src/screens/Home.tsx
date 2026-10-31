@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL, STREAK_GOAL, STREAK_BONUS } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
@@ -10,6 +10,9 @@ import { WeatherKind, WEATHER_LABEL } from '../engine/engine'
 import { TowerPlace } from '../components/village/Places'
 import { Confetti } from '../components/day/parts'
 import { LearnLink } from '../components/learn/LearnLink'
+import { GameBoundary } from '../game/GameBoundary'
+
+const GameScreen = lazy(() => import('../game/GameScreen').then(m => ({ default: m.GameScreen })))
 
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
@@ -46,6 +49,7 @@ export function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [streakOpen, setStreakOpen] = useState(false)
   const [preview, setPreview] = useState<WeatherKind | null>(null)
+  const [playing, setPlaying] = useState(false)
   const stage = evolutionStage(game)
   const weather = preview ?? v.weather
   const idx = e.demoPathIndex()
@@ -78,13 +82,15 @@ export function Home() {
 
   const step = () => advanceDay(v.nDays, (day, extra) => ({ landing: Math.round(e.forecastAtDay(day, idx, extra).balance), cushion: e.cushion }))
 
-  // the side panel next to the phone can open the purchase check or step a day
+  // the side panel next to the phone can open the purchase check, step a day or start the game
   const cue = useStore(s => s.cue)
   useEffect(() => {
-    const c = useStore.getState().takeCue(['buy', 'next'])
+    const c = useStore.getState().takeCue(['buy', 'next', 'play'])
     if (!c) return
+    if (c.kind === 'play') { if (!useStore.getState().gameOff) { setBuyOpen(false); setPlaying(true) } return }
     setTimeout(() => { if (c.kind === 'buy') setBuyOpen(true); else { setBuyOpen(false); step() } }, 250)
   }, [cue?.n])
+  const closeGame = () => setPlaying(false)
 
   return (
     <div className="screen" style={{ background: 'var(--paper)' }}>
@@ -107,6 +113,12 @@ export function Home() {
 
       <div style={{ position: 'relative' }}>
         <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} bubble={preview ? null : bubble} onJikhoTap={tapJikho} hop={hop} calm={v.hardship} />
+        {/* mini-game: this persona's month, payday to payday */}
+        {!gameOff && (
+          <motion.button whileTap={{ scale: 0.94 }} className="chip" style={{ position: 'absolute', left: 14, top: 56, zIndex: 3, background: 'linear-gradient(160deg,#ffd977,#ffb020)', color: '#3b2a00', fontWeight: 800, padding: '8px 13px', boxShadow: '0 6px 16px rgba(255,176,32,0.4)' }} onClick={() => setPlaying(true)}>
+            ▶ ითამაშე ეს თვე
+          </motion.button>
+        )}
         {/* time machine */}
         <div style={{ position: 'absolute', right: 12, bottom: 50, zIndex: 2 }} className="row">
           {!demo.finished ? (
@@ -221,6 +233,19 @@ export function Home() {
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
       <Ceremony />
+      {playing && !gameOff && (
+        <PhonePortal>
+          <GameBoundary onExit={closeGame}>
+            <Suspense fallback={<div style={{ position: 'absolute', inset: 0, zIndex: 26, background: 'var(--paper)' }} />}>
+              <GameScreen
+                onExit={closeGame}
+                onCheck={() => { closeGame(); useStore.getState().setCue({ kind: 'buy', n: Date.now() }) }}
+                onTalk={() => { closeGame(); setTab('chat'); useStore.getState().setCue({ kind: 'ask', texts: ['ვერ ვიხდი სესხს'], n: Date.now() }) }}
+              />
+            </Suspense>
+          </GameBoundary>
+        </PhonePortal>
+      )}
     </div>
   )
 }

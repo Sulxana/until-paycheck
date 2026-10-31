@@ -32,11 +32,12 @@ function qrUrl() {
   return PUBLIC_URL
 }
 
-const TRY_STEPS: { title: string; hint: string; tab: Tab; kind: 'buy' | 'ask' | 'next'; texts?: string[] }[] = [
+const TRY_STEPS: { title: string; hint: string; tab: Tab; kind: 'buy' | 'ask' | 'next' | 'play'; texts?: string[] }[] = [
   { title: 'ყიდვამდე შეამოწმე', hint: '100 ₾ — როგორ იცვლება ამინდი', tab: 'road', kind: 'buy' },
   { title: 'ტელეფონი განვადებით', hint: 'ჯიხო 1 200 ₾-ს დაითვლის', tab: 'chat', kind: 'ask', texts: ['1 200 ₾-ის ტელეფონი განვადებით'] },
   { title: 'აპრილამდე რომ დაიცადო?', hint: 'ახლა თუ აპრილში — შედარება', tab: 'chat', kind: 'ask', texts: ['1 200 ₾-ის ტელეფონი განვადებით', 'და თუ აპრილამდე დავიცადო?'] },
   { title: 'შემდეგი დღე', hint: 'გაიარე გზა ხელფასამდე', tab: 'road', kind: 'next' },
+  { title: 'ითამაშე ეს თვე', hint: 'ხელფასიდან ხელფასამდე, ერთ წუთში', tab: 'road', kind: 'play' },
 ]
 
 function QR({ text, size = 132 }: { text: string; size?: number }) {
@@ -61,10 +62,11 @@ export function App() {
   const game = useStore(s => s.games[s.personaId])
   const gameOff = useStore(s => s.gameOff)
 
-  // the "try it" steps beside the phone run the demo on the phone itself
+  // the "try it" steps beside the phone run the demo on the phone itself (the game step hides with the game)
+  const steps = TRY_STEPS.filter(st => !(gameOff && st.kind === 'play'))
   const [tried, setTried] = useState<number[]>([])
   const runStep = (i: number) => {
-    const st = TRY_STEPS[i]
+    const st = steps[i]
     const n = Date.now()
     setTab(st.tab)
     useStore.getState().setCue(st.kind === 'ask' ? { kind: 'ask', texts: st.texts, n } : { kind: st.kind, n })
@@ -92,9 +94,9 @@ export function App() {
             <span>სცადე</span>
             <span className="try-tip">დააჭირე და ტელეფონზე გაიხსნება</span>
           </div>
-          {TRY_STEPS.map((st, i) => {
+          {steps.map((st, i) => {
             const isDone = tried.includes(i)
-            const isNext = i === TRY_STEPS.findIndex((_, k) => !tried.includes(k))
+            const isNext = i === steps.findIndex((_, k) => !tried.includes(k))
             return (
               <motion.button key={st.title} whileHover={{ x: 3 }} whileTap={{ scale: 0.98 }} className={'try-step' + (isDone ? ' done' : '') + (isNext ? ' next' : '')} onClick={() => runStep(i)}>
                 <span className="try-num">{isDone ? '✓' : i + 1}</span>
