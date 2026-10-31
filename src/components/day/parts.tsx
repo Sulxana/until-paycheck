@@ -1,7 +1,8 @@
 import { useState, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Jikho, JikhoMood, Accessory } from '../Jikho'
-import { LessonItem, ActionKind, TOPICS } from '../../content/lessons'
+import { LessonItem, ActionKind, TOPICS, TopicId } from '../../content/lessons'
+import { useStore } from '../../state/store'
 
 /** ჯიხო + სიტყვის ბუშტი */
 export function JikhoSays({ mood, text, stage, accessories, size = 64 }: { mood: JikhoMood; text: ReactNode; stage: 0 | 1 | 2 | 3; accessories?: Accessory[]; size?: number }) {
@@ -44,20 +45,31 @@ export function Steps({ n, at, done, color = 'var(--sun-2)' }: { n: number; at: 
 
 const LETTERS = ['ა', 'ბ', 'გ', 'დ']
 
-/** ერთი კითხვა: დიდი ღილაკები → მყისიერი ფერი → ახსნა, წესი, „შენთვის", მოქმედება */
+export type OnLessonAction = (k: ActionKind, topic: TopicId) => void
+
+/** პირველი წინადადება ჩანს, დანარჩენი „ვრცლად"-ის უკანაა */
+function splitWhy(w: string): [string, string] {
+  const m = w.match(/^([\s\S]+?[.!?])\s+([\s\S]+)$/)
+  return m ? [m[1], m[2]] : [w, '']
+}
+
+/** ერთი კითხვა: დიდი ღილაკები → მყისიერი ფერი → შედეგი, ერთი წინადადება „რატომ", „შენთვის"; წესი — შეხებით */
 export function QuizCard({ item, label, onAnswer, onNext, nextLabel, onAction }: {
   item: LessonItem
   label: string
   onAnswer: (correct: boolean) => void
   onNext: () => void
   nextLabel: string
-  onAction?: (k: ActionKind) => void
+  onAction?: OnLessonAction
 }) {
   const [picked, setPicked] = useState<number | null>(null)
   const [acted, setActed] = useState(false)
+  const [more, setMore] = useState(false)
+  const ruleSaved = useStore(s => s.games[s.personaId].rules.includes(item.topic))
   const answered = picked !== null
   const ok = picked === item.correct
   const topic = TOPICS[item.topic]
+  const [whyFirst, whyRest] = splitWhy(item.why)
 
   const pick = (i: number) => {
     if (answered) return
@@ -108,26 +120,37 @@ export function QuizCard({ item, label, onAnswer, onNext, nextLabel, onAction }:
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', damping: 20 }}>
             <div className="card" style={{ marginTop: 12, background: ok ? '#effaf2' : '#f3f6fa', boxShadow: 'none', border: `1.5px solid ${ok ? '#cdebd7' : '#dfe6ef'}` }}>
               <div className="h3" style={{ color: ok ? 'var(--good)' : 'var(--navy)' }}>
-                {ok ? '✓ სწორია!' : 'კარგი მცდელობა — ახლა უკვე იცი'}
+                {ok ? '✓ სწორია' : <>სწორი პასუხი: {item.options[item.correct]}</>}
               </div>
-              {!ok && <div className="small" style={{ marginTop: 4, fontWeight: 700 }}>სწორი პასუხი: {item.options[item.correct]}</div>}
-              <div className="small" style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--ink)' }}>{item.why}</div>
-              <div style={{ marginTop: 10, background: '#fff6dc', borderRadius: 12, padding: '9px 11px', fontSize: 13, lineHeight: 1.45 }}>
-                <b>წესი:</b> {item.rule}
+              <div className="small" style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--ink)' }}>
+                {whyFirst}{' '}
+                <button className="tiny" style={{ color: 'var(--sky)', fontWeight: 800 }} onClick={() => setMore(m => !m)} aria-expanded={more}>
+                  {more ? 'მოკლედ' : 'ვრცლად ⓘ'}
+                </button>
               </div>
+              {more && (
+                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: 6, display: 'grid', gap: 8 }}>
+                  {whyRest && <div className="small" style={{ lineHeight: 1.5, color: 'var(--ink-2)' }}>{whyRest}</div>}
+                  <div style={{ background: '#fff6dc', borderRadius: 12, padding: '9px 11px', fontSize: 13, lineHeight: 1.45 }}>
+                    <b>წესი:</b> {item.rule}
+                  </div>
+                </motion.div>
+              )}
               <div style={{ marginTop: 8, background: '#e8f2fc', borderRadius: 12, padding: '9px 11px', fontSize: 13, lineHeight: 1.45 }}>
                 <b>შენთვის:</b> {item.forYou}
               </div>
-              {item.action && onAction && (
+              {item.action && onAction && (item.action.kind === 'save' && ruleSaved ? (
+                <span className="chip" style={{ marginTop: 10, background: '#e6f6ec', color: 'var(--good)', padding: '8px 12px' }}>✓ „ჩემს წესებშია"</span>
+              ) : (
                 <button
                   className="chip"
                   disabled={acted}
                   style={{ marginTop: 10, background: acted ? '#e6f6ec' : '#fff', boxShadow: acted ? 'none' : 'var(--shadow-sm)', padding: '8px 12px', color: acted ? 'var(--good)' : 'var(--navy)' }}
-                  onClick={() => { setActed(true); onAction(item.action!.kind) }}
+                  onClick={() => { setActed(true); onAction(item.action!.kind, item.topic) }}
                 >
-                  {acted && item.action.kind === 'save' ? '✓ შენახულია' : item.action.label}
+                  {item.action.label}
                 </button>
-              )}
+              ))}
             </div>
             <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-primary" style={{ marginTop: 12 }} onClick={onNext}>
               {nextLabel}

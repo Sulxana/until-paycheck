@@ -1,19 +1,22 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, COSMETIC_POOL } from '../state/store'
 import { usePersona } from '../engine/view'
-import { Jikho, STAGE_NAMES } from '../components/Jikho'
-import { Sheet, Progress } from '../components/ui'
-import { RED_LINES } from './Home'
+import { Jikho } from '../components/Jikho'
+import { Sheet } from '../components/ui'
+import { RED_LINES, RED_LINES_SHOWN } from './Home'
 import type { PlaceId } from '../components/village/Places'
 import { VillageScene } from '../components/village/VillageScene'
-import { PlaceSheet, YearMap, Wardrobe, stageProgress, jikhoTips } from '../components/village/VillageSections'
+import { PlaceSheet, YearMap, Wardrobe, jikhoTips } from '../components/village/VillageSections'
 
 const enter = (i: number) => ({
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
   transition: { delay: 0.08 + i * 0.07, duration: 0.35, ease: 'easeOut' as const },
 })
+
+/** said once, on the fair-play card */
+const FAIR_LINE = 'სოფელს ზრდის ქცევა — არა ხარჯი, სესხი ან ბალანსი.'
 
 export function Village() {
   const game = useStore(s => s.games[s.personaId])
@@ -23,6 +26,8 @@ export function Village() {
   const p = usePersona()
   const [place, setPlace] = useState<PlaceId | null>(null)
   const [rulesOpen, setRulesOpen] = useState(false)
+  const [allRules, setAllRules] = useState(false)
+  const [freezeInfo, setFreezeInfo] = useState(false)
 
   const stage = evolutionStage(game)
 
@@ -33,7 +38,7 @@ export function Village() {
           <Jikho size={120} mood="resting" stage={stage} />
           <div className="h2" style={{ marginTop: 8 }}>თამაში გამორთულია</div>
           <div className="small muted" style={{ marginTop: 6, lineHeight: 1.5 }}>
-            სოფელი შენახულია და არაფერი იკარგება. პროგნოზი, შემოწმება და გაკვეთილები ჩვეულებრივ მუშაობს.
+            სოფელი შენახულია. დანარჩენი ყველაფერი ჩვეულებრივ მუშაობს.
           </div>
           <button className="pill-btn btn-ghost" style={{ marginTop: 16 }} onClick={() => setGameOff(false)}>თამაშის ჩართვა</button>
         </div>
@@ -42,18 +47,16 @@ export function Village() {
   }
 
   const hardship = p.id === 'tamar'
-  const sp = stageProgress(game)
   const cycles = Math.min(12, game.cycles)
-  const ownedCount = game.cosmetics.length
   const lockedCount = COSMETIC_POOL.filter(c => !game.cosmetics.includes(c.id)).length
 
   return (
     <div className="screen" style={{ background: 'var(--paper)' }}>
-      {/* hardship banner */}
+      {/* support mode: one calm banner, no countdowns anywhere */}
       {hardship && (
         <motion.div className="pad" style={{ paddingTop: 14 }} {...enter(0)}>
           <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: 'var(--ink-2)' }}>
-            ❄️ <b style={{ color: 'var(--ink)' }}>მხარდაჭერის რეჟიმი:</b> სოფელი გაყინულია — არაფერი ინგრევა და არაფერი იკარგება.
+            ❄️ სოფელი ისვენებს — ყველაფერი შენახულია.
           </div>
         </motion.div>
       )}
@@ -62,27 +65,28 @@ export function Village() {
       <motion.div className="pad" style={{ paddingTop: hardship ? 12 : 18 }} {...enter(0)}>
         <div className="between">
           <div className="h2" style={{ fontSize: 22 }}>ჯიხოს სოფელი</div>
-          <span className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} title="სერია და გაყინვის დღეები">{hardship ? '❄ სერია გაყინულია' : `🏮 ${game.streak} დღე · ❄ ${game.freezes}`}</span>
+          {!hardship && (
+            <button className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} onClick={() => setFreezeInfo(v => !v)} aria-expanded={freezeInfo}>
+              🏮 {game.streak} დღე
+            </button>
+          )}
         </div>
-        <div className="card" style={{ marginTop: 10, padding: '10px 12px' }}>
-          <div className="row" style={{ gap: 10 }}>
-            <span className="chip" style={{ background: 'var(--navy)', color: '#fff', padding: '3px 10px 3px 3px' }}>
-              <span style={{ width: 26, height: 26, borderRadius: 13, background: '#fff', display: 'grid', placeItems: 'center', overflow: 'hidden' }}>
-                <Jikho size={26} stage={stage} bob={false} />
-              </span>
-              {STAGE_NAMES[stage]}
-            </span>
-            <span className="small muted" style={{ flex: 1, lineHeight: 1.3, fontWeight: 600 }}>{sp.text}</span>
-          </div>
-          <div style={{ marginTop: 9 }}><Progress value={sp.value} max={sp.max} color="var(--sun-2)" /></div>
-        </div>
+        <AnimatePresence>
+          {freezeInfo && !hardship && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
+              <div className="tiny muted" style={{ textAlign: 'right', marginTop: 6 }}>
+                {game.streak} დღე ზედიზედ{game.freezes > 0 ? ` · ❄ ${game.freezes} დაცვის დღე — გაცდენისას სერია არ წყდება` : ''}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* the village */}
       <motion.div style={{ marginTop: 12 }} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45, delay: 0.1 }}>
         <VillageScene game={game} stage={stage} hardship={hardship} tips={jikhoTips(game, hardship)} onOpen={setPlace} />
       </motion.div>
-      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>შეეხე ადგილს — გაიგებ, რა ზრდის მას</div>
+      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>შეეხე ადგილს ან ჯიხოს</div>
 
       {/* year map */}
       <motion.div className="pad" style={{ marginTop: 16 }} {...enter(2)}>
@@ -92,7 +96,7 @@ export function Village() {
             <span className="tag">{cycles}/12</span>
           </div>
           <div className="small muted" style={{ marginTop: 4, marginBottom: 14, lineHeight: 1.45 }}>
-            ყოველი გავლილი თვე (ხელფასიდან ხელფასამდე) საქართველოს რუკაზე ახალ ადგილს ხსნის.
+            ყოველი გავლილი თვე რუკაზე ახალ ადგილს ხსნის.
           </div>
           <YearMap cycles={game.cycles} />
         </div>
@@ -105,13 +109,11 @@ export function Village() {
             <div className="h3">ჯიხოს ნივთები</div>
             <span className="tag">აცვია {game.equipped.length}/2</span>
           </div>
-          <div className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>
-            შეეხე — ჩააცვი ან გახადე. ერთად მაქსიმუმ 2 ნივთი. გაქვს {ownedCount}/{COSMETIC_POOL.length}.
-          </div>
+          <div className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>შეეხე — ჩააცვი ან გახადე.</div>
           <Wardrobe game={game} stage={stage} onToggle={toggleEquip} />
           {lockedCount > 0 && (
-            <div className="small" style={{ marginTop: 12, background: '#f7f3ec', borderRadius: 12, padding: '8px 10px', color: 'var(--ink-2)', lineHeight: 1.45 }}>
-              ახალ ნივთებს გაკვეთილებისა და უსაფრთხო ხელფასის დღისთვის იღებ. <b>ფულით არაფერი იყიდება.</b>
+            <div className="tiny muted" style={{ marginTop: 10, lineHeight: 1.45 }}>
+              ახალი ნივთი — უსაფრთხო ხელფასის დღისთვის და გაკვეთილებისთვის. <b style={{ color: 'var(--ink)' }}>ფულით არაფერი იყიდება.</b>
             </div>
           )}
         </div>
@@ -123,25 +125,27 @@ export function Village() {
           <div style={{ fontSize: 28 }}>🛡️</div>
           <div style={{ flex: 1 }}>
             <div className="h3">სამართლიანი თამაში</div>
-            <div className="small muted">სოფლის {RED_LINES.length} წესი — რას არასდროს ვაკეთებთ</div>
+            <div className="small muted">{FAIR_LINE}</div>
           </div>
           <div className="muted">›</div>
         </motion.button>
       </motion.div>
 
-      <PlaceSheet place={place} game={game} onClose={() => setPlace(null)} />
-      <Sheet open={rulesOpen} onClose={() => setRulesOpen(false)}>
+      <PlaceSheet place={place} game={game} calm={hardship} onClose={() => setPlace(null)} />
+      <Sheet open={rulesOpen} onClose={() => { setRulesOpen(false); setAllRules(false) }}>
         <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', damping: 11, stiffness: 220 }} style={{ textAlign: 'center', fontSize: 44 }}>🛡️</motion.div>
-        <div className="h2" style={{ textAlign: 'center', marginTop: 4 }}>სამართლიანი თამაშის {RED_LINES.length} წესი</div>
-        <div className="small muted" style={{ textAlign: 'center', marginTop: 4 }}>სოფელი მხოლოდ კარგი ფინანსური ქცევით იზრდება.</div>
+        <div className="h2" style={{ textAlign: 'center', marginTop: 4 }}>სამართლიანი თამაში</div>
         <div className="card" style={{ marginTop: 12 }}>
           <ol style={{ margin: 0, paddingLeft: 20, fontSize: 13.5, lineHeight: 1.55 }}>
-            {RED_LINES.map((l, i) => (
+            {(allRules ? RED_LINES : RED_LINES.slice(0, RED_LINES_SHOWN)).map((l, i) => (
               <motion.li key={l} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + i * 0.04 }} style={{ marginBottom: 4 }}>{l}</motion.li>
             ))}
           </ol>
+          <button className="small" style={{ marginTop: 6, color: 'var(--sky)', fontWeight: 800 }} onClick={() => setAllRules(v => !v)} aria-expanded={allRules}>
+            {allRules ? 'ნაკლები ‹' : `ყველა წესი (${RED_LINES.length}) ›`}
+          </button>
         </div>
-        <button className="pill-btn btn-ghost" style={{ marginTop: 12 }} onClick={() => setRulesOpen(false)}>გასაგებია</button>
+        <button className="pill-btn btn-ghost" style={{ marginTop: 12 }} onClick={() => { setRulesOpen(false); setAllRules(false) }}>გასაგებია</button>
       </Sheet>
     </div>
   )

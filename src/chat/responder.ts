@@ -1,4 +1,4 @@
-import { Engine, TenorResult, KA_MONTHS_FULL, WEATHER_LABEL } from '../engine/engine'
+import { Engine, TenorResult, WEATHER_LABEL, WEATHER_ICON, weatherOf } from '../engine/engine'
 import { Persona } from '../engine/personas'
 import { ChatMsg, ChatCard } from '../state/store'
 import { parse, Parsed, ConceptId } from './parser'
@@ -9,6 +9,8 @@ export interface Ctx {
   amount?: number
   months?: number
   ratePerMonth?: number
+  /** the rate as the user wrote it, e.g. "18% წლიური" */
+  rateText?: string
   startOffset?: number
   upfront?: number
   item?: string
@@ -23,12 +25,12 @@ const id = () => `m${Date.now()}_${seq++}`
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
 
-export const START_CHIPS = ['100 ₾-ის ფეხსაცმელი ვიყიდო?', '1 200 ₾-ის ტელეფონი განვადებით', '2 000 ₾ სესხი 24 თვით 18%-ით', 'დღეს რამდენი შემიძლია?', 'რა არის PTI?']
+export const START_CHIPS = ['100 ₾-ის ფეხსაცმელი ვიყიდო?', '1 200 ₾-ის ტელეფონი განვადებით', '2 000 ₾ სესხი 24 თვით', 'დღეს რამდენი შემიძლია?']
 
 export function greeting(p: Persona): ChatMsg {
   return {
     id: id(), from: 'jikho',
-    text: `გამარჯობა, ${p.name}! ჯიხო ვარ 🐐 მკითხე ნებისმიერ შესყიდვაზე, განვადებაზე ან სესხზე. შენი ხარჯების ისტორიით დაგითვლი, რა მოხდება ხელფასამდე და მომდევნო თვეებში. გადაწყვეტილება შენია — მე მხოლოდ „ამინდს" გაჩვენებ.`,
+    text: `გამარჯობა, ${p.name}! ჯიხო ვარ 🐐\nმკითხე შესყიდვაზე, განვადებაზე ან სესხზე — გაჩვენებ ხელფასამდე „ამინდს".`,
     chips: START_CHIPS,
   }
 }
@@ -51,9 +53,9 @@ function daysText(p50: number, avg: number) {
 function purchaseAnswer(e: Engine, p: Persona, amount: number, item?: string, landingNow?: { p10: number; p50: number; p90: number; weather: any }, day0 = true, extraNow = 0, dayIdx = 0): ChatMsg[] {
   const r = day0 ? e.purchaseCheck(amount) : { ...e.forecastAtDay(dayIdx, e.demoPathIndex(), extraNow + amount).landing, amount, afterPayday: Math.round(e.landing.p50 + p.salary - e.fixedTotal - e.monthlyVarMedian - amount) }
   const base = landingNow ?? e.landing
-  const daysLeft = p.dayPattern.length - dayIdx
-  const sign = (v: number) => (v < 0 ? '−' : '+') + fmt(Math.abs(r5(v)))
-  let text = `თუ დღეს ${gel(amount)} დახარჯავ, ხელფასის დღეს სავარაუდოდ ~${fmt(r5(r.p50))} ₾ დაგრჩება (შესაძლო შუალედი: ${sign(r.p10)}…${sign(r.p90)} ₾) — ${daysText(r.p50, e.avgDaily)}. 10 მსგავსი თვიდან ${r.inTen}-ში ${fmt(e.cushion)}-ლარიან უსაფრთხო ზღვარს ქვემოთ ჩახვიდოდი. ხელფასამდე ${daysLeft} დღეა.`
+  let text = r.p50 > 0
+    ? `თუ დღეს ${gel(amount)} დახარჯავ, ხელფასის დღეს სავარაუდოდ ~${fmt(r5(r.p50))} ₾ დაგრჩება — ${daysText(r.p50, e.avgDaily)}.`
+    : `თუ დღეს ${gel(amount)} დახარჯავ, ფული ხელფასამდე სავარაუდოდ არ გეყოფა: დაგაკლდება ~${fmt(Math.max(5, r5(-r.p50)))} ₾.`
   const chips: string[] = []
   const more: ChatMsg[] = []
   if (r.weather === 'storm' || r.weather === 'rain') {
@@ -64,7 +66,7 @@ function purchaseAnswer(e: Engine, p: Persona, amount: number, item?: string, la
     chips.push(`და ${r10(amount * 2)} ₾ რომ იყოს?`, 'დღეს რამდენი შემიძლია?')
   }
   if (amount > e.spendable) {
-    text = `${gel(amount)} ახლა ხელმისაწვდომ ${gel(e.spendable)}-ზე მეტია — ხელფასამდე ანგარიშებზე ამდენი ფული არ გაქვს. ` + text
+    text = `ამდენი ფული ახლა ანგარიშზე არ გაქვს (ხელმისაწვდომია ${gel(e.spendable)}).`
   }
   return [{ id: id(), from: 'jikho', text, card: { kind: 'purchase', data: { amount, item, r, base: { p10: base.p10, p50: base.p50, p90: base.p90, weather: base.weather }, cushion: e.cushion, afterPayday: r.afterPayday } }, chips }, ...more]
 }
@@ -73,11 +75,18 @@ function tenorCard(e: Engine, rows: TenorResult[], title: string, note?: string)
   return { kind: 'installment', data: { title, cushion: e.cushion, salary: e.p.salary, laptop: e.p.installment, rows: rows.map(t => ({ label: t.label, monthly: t.monthly, total: t.total, cost: t.cost, eir: t.eirPct, pti: t.ptiNowPct, nShort: t.nShort, short: t.shortLabels, window: t.window.map(c => ({ label: c.label, p50: c.p50, p10: c.p10, pBelow: c.pBelow })), maxPBelow: t.maxPBelow, months: t.months, principal: t.principal, startLabel: t.startLabel })), note } }
 }
 
-function shortText(t: TenorResult, cushion: number) {
-  if (t.nShort === 0) return `არცერთ თვეში არ გაკლდება (ზღვარს ქვემოთ ჩასვლის შანსი ≤${Math.round(t.maxPBelow * 100)}%)`
-  if (t.nShort >= Math.max(7, t.window.length - 2)) return `თითქმის ყველა თვეში ხელფასამდე სავარაუდოდ ${fmt(cushion)}-ლარიან ზღვარს ქვემოთ ჩახვალ`
-  const months = t.shortLabels.map(l => l.split(' ')[1]).join(', ')
-  return `${t.window.length} თვიდან ${t.nShort}-ში ხელფასამდე სავარაუდოდ ${fmt(cushion)}-ლარიან ზღვარს ქვემოთ ჩახვალ (${months})`
+/** "1,5%/თვე": one decimal unless a second one is needed */
+function monthlyRateText(rate: number) {
+  const pct = rate * 100
+  const d = Math.abs(pct * 10 - Math.round(pct * 10)) > 1e-6 ? 2 : pct % 1 ? 1 : 0
+  return `${fmt(pct, d)}%/თვე`
+}
+
+function shortText(t: TenorResult) {
+  if (t.nShort === 0) return 'ყველა თვეში ხელფასამდე ზღვარს ზემოთ დარჩები'
+  if (t.nShort >= Math.max(7, t.window.length - 2)) return 'თითქმის ყველა თვეში ხელფასამდე ზღვარს ქვემოთ ჩახვალ'
+  const of = t.window.length < t.months ? `პირველი ${t.window.length} თვიდან ${t.nShort}-ში` : `${t.window.length}-დან ${t.nShort} თვეში`
+  return `${of} ხელფასამდე ზღვარს ქვემოთ ჩახვალ`
 }
 
 function installmentAnswer(e: Engine, p: Persona, c: Ctx, kind: 'installment' | 'loan'): ChatMsg[] {
@@ -86,60 +95,62 @@ function installmentAnswer(e: Engine, p: Persona, c: Ctx, kind: 'installment' | 
   const upfront = c.upfront ?? 0
   const isExampleRate = c.ratePerMonth === undefined
   const rate = c.ratePerMonth ?? (kind === 'loan' ? 0.18 / 12 : 0.015)
+  const rateTxt = rate === 0 ? '0%' : c.rateText ?? (kind === 'loan' && isExampleRate ? '18% წლიური' : monthlyRateText(rate))
+  const startMonth = ((10 + start) % 12) + 1
   const what = kind === 'loan' ? `${gel(price)} სესხი` : `${itemWord(c.item)} ${gel(price)} განვადებით`
-  const startTxt = start > 0 ? ` (დაწყება: ${KA_MONTHS_FULL[((10 + start) % 12) + 1]})` : ''
+  const title = what + (upfront ? ` · ${gel(upfront)} წინასწარ` : '') + (start > 0 ? ` · ${FROM[startMonth]}` : '')
+  // the label is set here: the engine's cached results can carry another one
+  const tenor = (months: number, r: number, label: string): TenorResult => ({ ...e.installment({ price, months, ratePerMonth: r, startOffset: start, upfront }), label })
   let rows: TenorResult[]
-  if (c.months) {
-    rows = [e.installment({ price, months: c.months, ratePerMonth: rate, startOffset: start, upfront, label: `${c.months} თვე, ${rate === 0 ? '0%' : fmt(rate * 100, rate * 100 % 1 ? 2 : 1) + '%/თვე'}` })]
-  } else if (kind === 'loan') {
-    rows = [12, 24, 36].map(m => e.installment({ price, months: m, ratePerMonth: rate, startOffset: start, upfront, label: `${m} თვე` }))
-  } else {
-    rows = [
-      e.installment({ price, months: 4, ratePerMonth: 0, startOffset: start, upfront, label: '4 თვე, 0%' }),
-      e.installment({ price, months: 12, ratePerMonth: rate, startOffset: start, upfront, label: `12 თვე, ${fmt(rate * 100, 1)}%/თვე` }),
-      e.installment({ price, months: 24, ratePerMonth: rate, startOffset: start, upfront, label: `24 თვე, ${fmt(rate * 100, 1)}%/თვე` }),
-    ]
-  }
-  const lines = rows.map(t => `• ${t.label}: თვეში ${fmt(t.monthly, t.monthly % 1 ? 1 : 0)} ₾, ჯამში ${gel(t.total)}, აქედან სესხის ფასი ${gel(t.cost)}${t.eirPct ? ` (ეფექტური განაკვეთი ~${fmt(t.eirPct, 1)}% წელიწადში)` : ''}. ${shortText(t, e.cushion)}.`)
-  const best = [...rows].sort((a, b) => a.nShort - b.nShort || a.cost - b.cost)[0]
-  const pti = rows[0].ptiNowPct
-  const ptiLine = `PTI (შემოსავლის რა წილი მიდის სესხებზე), შენი ახლანდელი განვადების ჩათვლით: ${fmt(pti, 1)}%${rows.length > 1 ? '–' + fmt(rows[rows.length - 1].ptiNowPct, 1) + '%' : ''}. 2027 წლის 1 თებერვლიდან 2 000 ₾-მდე შემოსავალზე ზღვარი 25% იქნება (შენთვის ${gel(p.salary * 0.25)}). PTI მხოლოდ სესხებს ითვლის და შენს ყოველდღიურ ხარჯს ვერ ხედავს — ზემოთ ნაჩვენები თვეები სწორედ ამას ავსებს.`
+  if (c.months) rows = [tenor(c.months, rate, `${c.months} თვე · ${rateTxt}`)]
+  else if (kind === 'loan') rows = [12, 24, 36].map(m => tenor(m, rate, `${m} თვე · ${rateTxt}`))
+  else rows = [tenor(4, 0, '4 თვე · 0%'), tenor(12, rate, `12 თვე · ${rateTxt}`), tenor(24, rate, `24 თვე · ${rateTxt}`)]
+
+  // whole percent, except right at the 25% limit (24,7% must not read as 25%)
+  const pct = (v: number) => (Math.round(v) === 25 ? fmt(v, 1) : fmt(Math.round(v)))
+  const ptis = rows.map(t => t.ptiNowPct)
+  const lo = pct(Math.min(...ptis)), hi = pct(Math.max(...ptis))
+  const ptiLine = `ბანკი PTI-ს უყურებს: შემოსავლის ${lo === hi ? lo : `${lo}–${hi}`}% სესხებზე წავა (2027-დან ლიმიტი 25%). შენს ყოველდღიურ ხარჯს კი ვერ ხედავს — ფერადი თვეები სწორედ ამას აჩვენებს.`
   const save = e.monthsToSave(price - upfront)
-  const cashLine = Number.isFinite(save) && save <= 24 ? `სესხის გარეშე: თუ თვეში ჩვეულებრივ დარჩენილ ~${gel(Math.round(e.medianSurplus))}-ს გადადებ, ${gel(price - upfront)} დაახლოებით ${save} თვეში დაგროვდება — სესხის ფასი 0 ₾.` : ''
+  const cashLine = Number.isFinite(save) && save <= 24 ? `სესხის გარეშე: თუ თვეში დარჩენილ ~${gel(Math.round(e.medianSurplus))}-ს გადადებ, ${gel(price - upfront)} ~${save} თვეში დაგროვდება.` : ''
   const chips: string[] = []
   if (p.installment && start === 0) chips.push(`და თუ ${UNTIL[p.installment.lastCycle[1]]} დავიცადო?`)
   if (!c.months) chips.push(kind === 'loan' ? '48 თვეზე?' : '6 თვეზე?')
   if (p.savings && !upfront) chips.push(`${Math.min(300, Math.round(p.savings.amount / 100) * 100 - 100)} ₾ დანაზოგიდან წინასწარ`)
-  chips.push('რა არის ეფექტური განაკვეთი?')
-  let compareLine = ''
+  chips.push('რა არის PTI?', 'რა არის ეფექტური განაკვეთი?')
+
   let compare: any = null
   if (start > 0 && rows.length === 1) {
-    const now = e.installment({ price, months: rows[0].months, ratePerMonth: rate, upfront })
-    const now24 = e.installment({ price, months: 24, ratePerMonth: rate, upfront })
     const t = rows[0]
-    compare = { nowShort: now.nShort, nowWindow: now.window.length, nowCost: now.cost, cost: t.cost, cost24: now24.cost, short: t.nShort }
-    compareLine = `ახლა რომ აიღო, ${now.window.length} თვიდან ${now.nShort}-ში სავარაუდოდ ზღვარს ქვემოთ ჩახვიდოდი. თუ ${FROM[((10 + start) % 12) + 1]} დაიწყებ (${t.months} თვით), ასეთი ${t.nShort === 0 ? 'არცერთი თვე არ იქნება' : `${t.nShort} თვე იქნება`}. სესხის ფასი ${gel(t.cost)}${now24.cost > t.cost ? ` — ${gel(now24.cost - t.cost)}-ით ნაკლები, ვიდრე 24 თვით (${gel(now24.cost)})` : ''}.`
+    const now = e.installment({ price, months: t.months, ratePerMonth: rate, upfront })
+    const now24 = e.installment({ price, months: 24, ratePerMonth: rate, upfront })
+    // each box shows the worst month's weather of that option
+    compare = { from: FROM[startMonth], months: t.months, nowShort: now.nShort, nowWeather: weatherOf(now.maxPBelow), short: t.nShort, weather: weatherOf(t.maxPBelow), cost: t.cost, cost24: now24.cost }
   }
-  const card = tenorCard(e, rows, what + startTxt, isExampleRate ? `განაკვეთი მაგალითისთვისაა (${kind === 'loan' ? '18% წელიწადში' : '1,5% თვეში'}) — მომწერე შენი შეთავაზების განაკვეთი და გადავითვლი.` : undefined)
+
+  const card = tenorCard(e, rows, title, isExampleRate ? `განაკვეთი სამაგალითოა (${rateTxt}). მომწერე შენი — გადავითვლი.` : undefined)
   card.data.compare = compare
-  const msgs: ChatMsg[] = [
-    { id: id(), from: 'jikho', text: compareLine || (rows.length > 1 ? `${what}${startTxt}: ${rows.length} ვარიანტი, შენს თვეებზე დათვლილი. ვადის მიხედვით დავალაგე — არცერთი არ არის „რეკომენდებული". ფერადი ზოლი ყოველი თვის ამინდს გიჩვენებს ხელფასამდე.` : lines[0].replace('• ', '')), card },
-    compare && compare.short === 0 && compare.nowShort > 0 && compare.cost24 > compare.cost
-      ? { id: id(), from: 'jikho', text: 'ასეთ შედარებას განვადების გაფორმებისას ჩვეულებრივ ვერ ნახავ 🐐 ინფორმაციაა, არა რჩევა — არჩევანი შენია.', chips: ['24 თვეზე?', 'რა არის ეფექტური განაკვეთი?', 'დღეს რამდენი შემიძლია?'] }
-      : rows.length > 1
-        ? { id: id(), from: 'jikho', text: [ptiLine, cashLine].filter(Boolean).join(' '), chips }
-        : { id: id(), from: 'jikho', text: `PTI (შემოსავლის რა წილი მიდის სესხებზე): ${fmt(pti, 1)}%. ${cashLine}`, chips },
+  const t0 = rows[0]
+  const first = compare
+    ? `თუ ${compare.from} დაიწყებ (${t0.months} თვით) 👇`
+    : rows.length > 1
+      ? `აი, ${rows.length} ვარიანტი შენს თვეებზე 👇`
+      : `${what}, ${t0.months} თვით: თვეში ~${gel(Math.round(t0.monthly))}. ${shortText(t0)} 👇`
+  const second = compare && compare.short === 0 && compare.nowShort > 0 && compare.cost24 > compare.cost
+    ? { text: 'ასეთ შედარებას განვადების გაფორმებისას იშვიათად ნახავ 🐐', chips: ['24 თვეზე?', 'რა არის PTI?', 'დღეს რამდენი შემიძლია?'] }
+    : { text: [ptiLine, cashLine].filter(Boolean).join('\n'), chips }
+  return [
+    { id: id(), from: 'jikho', text: first, card },
+    { id: id(), from: 'jikho', ...second },
   ]
-  if (rows.length > 1 && best.nShort === 0) msgs[1].text += ` „${best.label}" ვარიანტით სავარაუდოდ ყველა თვეში ზღვარს ზემოთ დარჩები — ინფორმაციაა, არა რჩევა.`
-  return msgs
 }
 
 const CONCEPT_TEXT: Record<ConceptId, (e: Engine, p: Persona) => { title: string; body: string; mine: string; rule: string }> = {
   pti: (e, p) => ({
     title: 'PTI — შემოსავლის რა წილი მიდის სესხებზე',
-    body: 'PTI = ყველა სესხისა და განვადების თვიური შენატანი, გაყოფილი ხელზე ასაღებ შემოსავალზე. ბანკი მას ერთხელ ითვლის — სესხის გაცემისას. ეროვნული ბანკის კომიტეტმა 2026 წლის 30 სექტემბერს გადაწყვიტა: 2027 წლის 1 თებერვლიდან 2 000 ₾-მდე შემოსავალზე PTI 25%-ს არ უნდა აღემატებოდეს. ოფიციალური ცვლილება ჯერ მზადდება.',
-    mine: `შენი შენატანები ახლა: ${gel(e.laptop)} თვეში → PTI ${fmt(e.laptop / p.salary * 100, 1)}%. 25%-იანი ზღვარი შენთვის: ${gel(p.salary * 0.25)} თვეში.`,
-    rule: 'თუ PTI-ის ზღვარში ჯდები, ეს არ ნიშნავს, რომ თვეს გაუძლებ — PTI შენს ხარჯებს და გადახდის თარიღებს ვერ ხედავს.',
+    body: 'PTI = ყველა სესხისა და განვადების თვიური შენატანი, გაყოფილი ხელზე ასაღებ შემოსავალზე. ბანკი მას ერთხელ ითვლის — სესხის გაცემისას. ეროვნული ბანკის კომიტეტის 2026 წლის 30 სექტემბრის გადაწყვეტილებით, 2027 წლის 1 თებერვლიდან 2 000 ₾-მდე შემოსავალზე PTI-ის ლიმიტი 25% იქნება.',
+    mine: `შენი შენატანები ახლა: ${gel(e.laptop)} თვეში → PTI ${fmt(e.laptop / p.salary * 100, 1)}%. ლიმიტი შენთვის: ${gel(p.salary * 0.25)} თვეში.`,
+    rule: 'თუ PTI-ის ლიმიტში ჯდები, ეს არ ნიშნავს, რომ თვეს გაუძლებ — PTI შენს ხარჯებს და გადახდის თარიღებს ვერ ხედავს.',
   }),
   eir: () => ({
     title: 'ეფექტური წლიური განაკვეთი',
@@ -209,8 +220,8 @@ const CONCEPT_TEXT: Record<ConceptId, (e: Engine, p: Persona) => { title: string
   }),
   restructure: () => ({
     title: 'როცა ვერ იხდი',
-    body: 'ჩვეულებრივ, ჯერ ქირას, კომუნალურს და საკვებს იხდიან, მერე — გირაოიან სესხებს (მაგ., სახლზე ან მანქანაზე), ბოლოს — დანარჩენს. ბანკს შეგიძლია სთხოვო რესტრუქტურიზაცია, ანუ სესხის პირობების შეცვლა: ვადის გაგრძელება ან გადახდის დროებითი შეღავათი. დახმარებას გაგიწევს ეროვნული ბანკის მომხმარებელთა უფლებების სერვისი და finedu.gov.ge.',
-    mine: 'მხარდაჭერის რეჟიმში სერია გაყინულია და არაფერი იკარგება. მოდი, გადასახადები ერთად დავალაგოთ.',
+    body: 'ჩვეულებრივ, ჯერ ქირას, კომუნალურს და საკვებს იხდიან, მერე — გირაოიან სესხებს (მაგ., სახლზე ან მანქანაზე), ბოლოს — დანარჩენს. ბანკს შეგიძლია ვადამდე სთხოვო რესტრუქტურიზაცია: ვადის გაგრძელება ან დროებითი შეღავათი. დახმარებას გაგიწევს ეროვნული ბანკის მომხმარებელთა უფლებების სერვისი და finedu.gov.ge.',
+    mine: 'მოდი, გადასახადები ერთად დავალაგოთ.',
     rule: 'ძველი ვალის დასაფარად აღებული ახალი სესხი ხშირად ვალს უფრო ზრდის.',
   }),
   fixed: e => ({
@@ -224,6 +235,7 @@ const CONCEPT_TEXT: Record<ConceptId, (e: Engine, p: Persona) => { title: string
 export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { day: number; extra: number }): { msgs: ChatMsg[]; ctx: Ctx; mood: 'happy' | 'calm' | 'worried' | 'thinking' } {
   const q: Parsed = parse(input)
   const day0 = demo.day === 0 && demo.extra === 0
+  const rateTxt = (pp: Parsed): string | undefined => (pp.zeroRate ? '0%' : pp.ratePct === undefined ? undefined : `${fmt(pp.ratePct, pp.ratePct % 1 ? 1 : 0)}%${pp.rateIsAnnual ? ' წლიური' : '/თვე'}`)
   const rateFrom = (pp: Parsed): number | undefined => (pp.zeroRate ? 0 : pp.ratePct === undefined ? undefined : pp.rateIsAnnual ? pp.ratePct / 100 / 12 : pp.ratePct / 100)
   const startFrom = (pp: Parsed) => (pp.startMonth ? offsetForStartMonth(pp.startMonth) : pp.afterPayday ? 0 : undefined)
 
@@ -235,13 +247,13 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
     case 'thanks':
       return { msgs: [jk('არაფრის! ამ ბილიკს ერთად გავდივართ ⛰️ სხვა რამეც შევამოწმოთ?', ['დღეს რამდენი შემიძლია?', 'როგორ ვითვლი ამინდს?'])], ctx, mood: 'happy' }
     case 'who':
-      return { msgs: [jk('მე ჯიხო ვარ — კავკასიური ჯიხვი. მთის ბილიკზე წონასწორობას ვინარჩუნებ, შენ კი თვის ბოლომდე მისვლაში გეხმარები. ყველა რიცხვი შენი ხარჯების ისტორიიდან ზუსტი ფორმულებით ითვლება — მე მხოლოდ გიხსნი. ინფორმაციას გაძლევ, არა რჩევას.', START_CHIPS)], ctx, mood: 'happy' }
+      return { msgs: [jk('მე ჯიხო ვარ — კავკასიური ჯიხვი. მთის ბილიკზე წონასწორობას ვინარჩუნებ, შენ კი თვის ბოლომდე მისვლაში გეხმარები. ყველა რიცხვი შენი ხარჯების ისტორიიდან ზუსტი ფორმულებით ითვლება — მე მხოლოდ გიხსნი.', START_CHIPS)], ctx, mood: 'happy' }
     case 'invest':
       return { msgs: [jk('ინვესტიციებზე რჩევას ვერ მოგცემ — ლიცენზირებული მრჩეველი არ ვარ. შემიძლია აგიხსნა, რა არის რისკი, დივერსიფიკაცია (რისკის გადანაწილება) და ინფლაცია. ისიც შემიძლია გაჩვენო, რამდენი გრჩება თვეში დასაზოგად.', ['რა არის ინფლაცია?', 'რა არის რთული პროცენტი?', 'რამდენ ხანში დავაგროვებ?'])], ctx, mood: 'calm' }
     case 'hardship':
     case 'concept': {
       const c = CONCEPT_TEXT[q.concept!](e, p)
-      return { msgs: [{ id: id(), from: 'jikho', text: c.body, card: { kind: 'concept', data: c }, chips: q.concept === 'pti' ? ['1 200 ₾-ის ტელეფონი განვადებით', 'რა არის ეფექტური განაკვეთი?'] : ['დღეს რამდენი შემიძლია?', 'რა არის PTI?'] }], ctx, mood: 'calm' }
+      return { msgs: [{ id: id(), from: 'jikho', text: c.body, card: { kind: 'concept', data: c }, chips: q.concept === 'pti' ? ['1 200 ₾-ის ტელეფონი განვადებით', 'რა არის ეფექტური განაკვეთი?'] : q.concept === 'restructure' ? ['რა არის საკრედიტო ისტორია?', 'დღეს რამდენი შემიძლია?'] : ['დღეს რამდენი შემიძლია?', 'რა არის PTI?'] }], ctx, mood: 'calm' }
     }
     case 'safe': {
       const f = day0 ? e.landing : e.forecastAtDay(demo.day, e.demoPathIndex(), demo.extra).landing
@@ -249,14 +261,14 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
       const safe = daysLeft > 0 ? Math.max(0, Math.round((f.p50 - e.cushion) / daysLeft)) : 0
       const max = day0 ? e.maxComfortablePurchase() : Math.max(0, Math.floor((f.p10 + (f.p50 - f.p10) * 0.6 - e.cushion) / 5) * 5)
       const text = safe > 0
-        ? `დღეში ჩვეულებრივ ~${gel(Math.round(e.avgDaily))}-ს ხარჯავ. ამის გარდა დღეს დაახლოებით ${gel(safe)} თავისუფლად გაქვს. ~${gel(max)}-მდე ერთჯერადი შესყიდვა ამინდს ღრუბლიანზე უარესს არ გახდის.`
+        ? `დღეს ჩვეული ხარჯის გარდა ~${gel(safe)} თავისუფალია 👇`
         : `ხელფასამდე ჩვეული ხარჯის გარდა თავისუფალი თანხა თითქმის არ რჩება — პროგნოზი უსაფრთხო ზღვართან ახლოსაა. აუცილებელი ხარჯი, რა თქმა უნდა, მაინც აუცილებელია.`
       return { msgs: [jk(text, [`${max || 20} ₾-ის რამე ვიყიდო?`, 'როგორ ვითვლი ამინდს?'], { kind: 'safe', data: { safe, max, avg: e.avgDaily, landing: f, cushion: e.cushion, daysLeft } })], ctx, mood: safe > 0 ? 'happy' : 'calm' }
     }
     case 'forecast': {
       const f = day0 ? e.landing : e.forecastAtDay(demo.day, e.demoPathIndex(), demo.extra).landing
       const daysLeft = p.dayPattern.length - demo.day
-      return { msgs: [jk(`ხელფასამდე ${daysLeft} დღეა. ყველაზე სავარაუდოდ ~${fmt(r10(f.p50))} ₾ დაგრჩება (შესაძლო შუალედი: ${rangeText(r10(f.p10), r10(f.p90))}). ${daysText(f.p50, e.avgDaily)}. ამინდი ${WEATHER_LABEL[f.weather]}ა: 10 მსგავსი თვიდან ${f.inTen}-ში უსაფრთხო ზღვარს ქვემოთ ჩახვიდოდი.`, ['დღეს რამდენი შემიძლია?', 'როგორ ვითვლი ამინდს?'], { kind: 'forecast', data: { fan: e.fan(), cushion: e.cushion, landing: f } })], ctx, mood: f.weather === 'sun' || f.weather === 'cloud' ? 'happy' : 'worried' }
+      return { msgs: [jk(`ხელფასამდე ${daysLeft} დღეა. ${f.p50 > 0 ? `სავარაუდოდ ~${fmt(r10(f.p50))} ₾ დაგრჩება` : 'ფული სავარაუდოდ ვერ გეყოფა'} — ამინდი ${WEATHER_LABEL[f.weather]}ა ${WEATHER_ICON[f.weather]}`, ['დღეს რამდენი შემიძლია?', 'როგორ ვითვლი ამინდს?'], { kind: 'forecast', data: { fan: e.fan(), cushion: e.cushion, landing: f } })], ctx, mood: f.weather === 'sun' || f.weather === 'cloud' ? 'happy' : 'worried' }
     }
     case 'save': {
       const amount = q.amount ?? ctx.amount ?? 1200
@@ -271,16 +283,16 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
       const nctx: Ctx = { kind: 'purchase', amount, item: q.item }
       if (q.afterPayday) {
         const after = Math.round(e.landing.p50 + p.salary - e.fixedTotal - e.monthlyVarMedian - amount)
-        return { msgs: [jk(`თუ ${gel(amount)}-ს ხელფასის შემდეგ დახარჯავ, ${after >= e.cushion ? `ზღვარს ზემოთ დარჩები: შემდეგ ხელფასამდე სავარაუდოდ ~${gel(r10(after))} დაგრჩება` : `მაინც მჭიდროდ იქნები: შემდეგ ხელფასამდე სავარაუდოდ ~${gel(r10(after))} დაგრჩება`}. ეს მიახლოებითი პროგნოზია — ვვარაუდობ, რომ შენი ბოლო თვეები განმეორდება.`, ['დღეს რამდენი შემიძლია?'])], ctx: nctx, mood: after >= e.cushion ? 'happy' : 'calm' }
+        return { msgs: [jk(`თუ ${gel(amount)}-ს ხელფასის შემდეგ დახარჯავ, შემდეგ ხელფასამდე სავარაუდოდ ~${gel(r10(after))} დაგრჩება — ${after >= e.cushion ? 'ზღვარს ზემოთ' : 'მაინც მჭიდროდ'}.`, ['დღეს რამდენი შემიძლია?'])], ctx: nctx, mood: after >= e.cushion ? 'happy' : 'calm' }
       }
-      if (q.months || q.ratePct !== undefined || q.zeroRate) return respondInstallment({ ...nctx, kind: 'installment', months: q.months, ratePerMonth: rateFrom(q), startOffset: startFrom(q), upfront: q.upfront }, 'installment')
+      if (q.months || q.ratePct !== undefined || q.zeroRate) return respondInstallment({ ...nctx, kind: 'installment', months: q.months, ratePerMonth: rateFrom(q), rateText: rateTxt(q), startOffset: startFrom(q), upfront: q.upfront }, 'installment')
       const msgs = purchaseAnswer(e, p, amount, q.item, undefined, day0, demo.extra, demo.day)
       const w = msgs[0].card!.data.r.weather
       return { msgs, ctx: nctx, mood: w === 'sun' || w === 'cloud' ? 'happy' : 'worried' }
     }
     case 'installment':
     case 'loan': {
-      const nctx: Ctx = { kind: q.intent, amount: q.amount ?? (ctx.kind ? ctx.amount : undefined), item: q.item ?? ctx.item, months: q.months, ratePerMonth: rateFrom(q), startOffset: startFrom(q), upfront: q.upfront }
+      const nctx: Ctx = { kind: q.intent, amount: q.amount ?? (ctx.kind ? ctx.amount : undefined), item: q.item ?? ctx.item, months: q.months, ratePerMonth: rateFrom(q), rateText: rateTxt(q), startOffset: startFrom(q), upfront: q.upfront }
       if (nctx.amount === undefined) {
         return { msgs: [jk(q.intent === 'loan' ? 'რა თანხის სესხზე ფიქრობ და რამდენი თვით? მაგალითად: „2 000 ლარი 24 თვით 18%-ით".' : 'რა ღირს ნივთი? მაგალითად: „1 200 ლარის ტელეფონი 12 თვით".', q.intent === 'loan' ? ['2 000 ₾ სესხი 24 თვით 18%-ით', '1 000 ₾ სესხი 12 თვით'] : ['1 200 ₾-ის ტელეფონი განვადებით', '800 ₾ მაცივარი 0%-ით 6 თვით'])], ctx: nctx, mood: 'thinking' }
       }
@@ -290,7 +302,7 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
       if (ctx.kind === 'installment' || ctx.kind === 'loan') {
         const nctx: Ctx = { ...ctx }
         if (q.months) nctx.months = q.months
-        const r = rateFrom(q); if (r !== undefined) nctx.ratePerMonth = r
+        const r = rateFrom(q); if (r !== undefined) { nctx.ratePerMonth = r; nctx.rateText = rateTxt(q) }
         const st = startFrom(q); if (st !== undefined) nctx.startOffset = st
         if (q.upfront !== undefined) nctx.upfront = q.upfront
         else if (q.useSavings && p.savings) nctx.upfront = Math.min(300, p.savings.amount)
@@ -302,7 +314,7 @@ export function respond(input: string, e: Engine, p: Persona, ctx: Ctx, demo: { 
       if (ctx.kind === 'purchase' && ctx.amount) {
         if (q.amount !== undefined) return respond(`${q.amount} ლარი ვიყიდო`, e, p, ctx, demo)
         if (q.afterPayday) return respond(`${ctx.amount} ლარი ხელფასის შემდეგ ვიყიდო`, e, p, ctx, demo)
-        if (q.months || q.ratePct !== undefined) return respondInstallment({ kind: 'installment', amount: ctx.amount, item: ctx.item, months: q.months, ratePerMonth: rateFrom(q) }, 'installment')
+        if (q.months || q.ratePct !== undefined) return respondInstallment({ kind: 'installment', amount: ctx.amount, item: ctx.item, months: q.months, ratePerMonth: rateFrom(q), rateText: rateTxt(q) }, 'installment')
       }
       if (q.amount !== undefined) return respond(`${q.amount} ლარი ვიყიდო`, e, p, ctx, demo)
       return { msgs: [jk('რა თანხაზე ფიქრობ? მომწერე, მაგალითად: „300 ლარი" ან „1 200 ლარი 12 თვით".', START_CHIPS)], ctx, mood: 'thinking' }

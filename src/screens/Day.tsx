@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, CHECK_MAX } from '../state/store'
 import { useToday } from '../engine/view'
-import { Disclaimer, Sheet } from '../components/ui'
+import { Sheet } from '../components/ui'
 import { Morning } from '../components/day/Morning'
 import { Evening } from '../components/day/Evening'
 import { BeatCard, QuestsCard, beatNumbers } from '../components/day/Weekly'
@@ -28,7 +28,7 @@ export function Day() {
   const demo = useStore(s => s.demos[p.id])
   const gameOff = useStore(s => s.gameOff)
   const setTab = useStore(s => s.setTab)
-  const toast = useStore(s => s.toast)
+  const saveRule = useStore(s => s.saveRule)
   const localKey = `${p.id}:${demo.day}:${game.cycles}`
   const cash = useDayLocal(s => s.cash[localKey])
 
@@ -37,11 +37,11 @@ export function Day() {
   const [checkOpen, setCheckOpen] = useState(false)
   const [topic, setTopic] = useState<TopicId | null>(null)
 
-  const onAction = (k: ActionKind) => {
+  const onAction = (k: ActionKind, t: TopicId) => {
     if (k === 'chat') setTab('chat')
     else if (k === 'road') setTab('road')
     else if (k === 'analytics') setTab('analytics')
-    else toast('📌', 'შენახულია ჯიხოს წიგნაკში')
+    else saveRule(t) // really adds the topic's rule to "ჩემი წესები"
   }
   const go = (s: Seg) => { setFocus(false); setSeg(s) }
 
@@ -63,18 +63,17 @@ export function Day() {
             <div className="h2" style={{ fontSize: 26 }}>სწავლა</div>
             <div className="small muted">დღეში 2 წუთი, შენივე რიცხვებით</div>
           </div>
-          {!gameOff && (v.hardship ? (
-            <span className="chip" style={{ background: '#e8f2fc', color: '#2c6aa0' }}>❄ სერია გაყინულია</span>
-          ) : (
+          {!gameOff && !v.hardship && (
             <motion.span key={game.streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="chip" style={{ background: game.litToday ? '#fff1cc' : '#f2ede4' }}>
               🏮 {game.streak}{game.litToday ? ' · ანთია' : ''}
             </motion.span>
-          ))}
+          )}
         </div>
 
+        {/* support mode: said once here (Jikho's morning bubble explains the small steps) */}
         {v.hardship && (
           <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', marginTop: 10, fontSize: 13.5, lineHeight: 1.45 }}>
-            <b>მხარდაჭერის რეჟიმი.</b> სერია გაყინულია, ამიტომ არაფერს კარგავ. დილით პატარა ნაბიჯებით გავარკვევთ, რომელი გადასახადია პირველი და როგორ დაველაპარაკოთ ბანკს.
+            <b>❄ მხარდაჭერის რეჟიმი.</b> სერია გაყინულია, არაფერს კარგავ.
           </div>
         )}
 
@@ -150,7 +149,7 @@ export function Day() {
             <div className="card">
               <div className="between"><div className="h3">ჩემი წესები</div><span className="tag">{game.rules.length}/9</span></div>
               {game.rules.length === 0 ? (
-                <div className="small muted" style={{ marginTop: 6 }}>ყოველი 30-წამიანი გაკვეთილის შემდეგ აქ ერთი წესი გამოჩნდება.</div>
+                <div className="small muted" style={{ marginTop: 6 }}>აქ შენი ნასწავლი წესები გამოჩნდება.</div>
               ) : (
                 <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
                   {game.rules.map(t => (
@@ -185,9 +184,6 @@ export function Day() {
         </div>
       )}
 
-      <div className="pad" style={{ marginTop: 10 }}>
-        <Disclaimer>ეს ინფორმაციაა და არა რჩევა. რიცხვები შენი ისტორიიდან ითვლება.</Disclaimer>
-      </div>
       <div style={{ height: 18 }} />
 
       <Sheet open={checkOpen} onClose={() => setCheckOpen(false)}>

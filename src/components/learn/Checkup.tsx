@@ -46,7 +46,7 @@ export function Checkup({ onClose, todayLabel }: { onClose: () => void; todayLab
           <div style={{ fontSize: 26, paddingBottom: 30 }}>→</div>
           <ScoreBar label="დღეს" score={score} color="#58b368" />
         </div>
-        <div className="small muted" style={{ maxWidth: 300 }}>ეს იგივე კითხვებია, რითაც დაიწყე. ასე ჩანს, რა შეიცვალა და არა ის, რამდენი გაკვეთილი გაიარე.</div>
+        <div className="small muted" style={{ maxWidth: 300 }}>ეს იგივე კითხვებია, რითაც დაიწყე.</div>
         <button className="pill-btn btn-primary" onClick={onClose}>დახურვა</button>
       </motion.div>
     )

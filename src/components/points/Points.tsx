@@ -38,7 +38,7 @@ export function Points() {
           <motion.div key={points} initial={{ scale: 0.8, opacity: 0.5 }} animate={{ scale: 1, opacity: 1 }} style={{ fontSize: 44, fontWeight: 800, lineHeight: 1 }}>{points}</motion.div>
           <div style={{ fontSize: 16, opacity: 0.85 }}>ქულა</div>
         </div>
-        <div className="small" style={{ marginTop: 6, opacity: 0.9, lineHeight: 1.45 }}>ქულებს იღებ კარგი ფინანსური ჩვევებისთვის: სწავლა, შემოწმება ყიდვამდე, დანაზოგი. მერე ცვლი პარტნიორის ფასდაკლების კუპონზე.</div>
+        <div className="small" style={{ marginTop: 6, opacity: 0.9, lineHeight: 1.45 }}>ქულებს იღებ კარგი ფინანსური ჩვევებისთვის და ცვლი ფასდაკლების კუპონზე.</div>
         {hardship ? (
           <div className="small" style={{ marginTop: 8, opacity: 0.9, lineHeight: 1.45 }}>მხარდაჭერის რეჟიმში ქულები უბრალოდ ინახება და არ იწვება. გაჩვენებთ მხოლოდ აუცილებელ ხარჯს და ბიუჯეტის დახმარებას.</div>
         ) : nextTarget ? (
@@ -51,7 +51,7 @@ export function Points() {
         ) : (
           <div className="small" style={{ marginTop: 10, opacity: 0.9 }}>ყველა კუპონისთვის ქულა გყოფნის.</div>
         )}
-        <div className="tiny" style={{ marginTop: 8, opacity: 0.8 }}>ქულებს ვადა არ აქვს. აიღე კუპონი მხოლოდ მაშინ, როცა ამის ყიდვას ისედაც აპირებ.</div>
+        {!hardship && <div className="tiny" style={{ marginTop: 8, opacity: 0.8 }}>ქულებს ვადა არ აქვს.</div>}
       </div>
 
       {/* my coupons: right under the balance, so a new one is visible at once */}
@@ -65,12 +65,9 @@ export function Points() {
                 <motion.div key={c.code} initial={done?.code === c.code ? { scale: 0.8, opacity: 0 } : false} animate={{ scale: 1, opacity: 1 }} className="between" style={{ padding: '10px 12px', borderRadius: 14, border: '2px dashed #e0c36a', background: '#fffaf0', gap: 8 }}>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 800 }}>{x?.name} <span style={{ color: '#2f7a4c' }}>{x?.badge}</span></div>
-                    <div className="tiny muted">აღებულია {c.at} · მოქმედებს 30 დღე · კოდი აჩვენე პარტნიორს</div>
+                    <div className="tiny muted">აღებულია {c.at} · მოქმედებს 30 დღე</div>
                   </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15, letterSpacing: 1 }}>{c.code}</div>
-                    <div className="tiny muted">დემო კოდი</div>
-                  </div>
+                  <div style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15, letterSpacing: 1, flexShrink: 0 }}>{c.code}</div>
                 </motion.div>
               )
             })}
@@ -92,7 +89,7 @@ export function Points() {
             )
           })}
         </div>
-        {interests.length === 0 && <div className="small" style={{ marginTop: 8, color: 'var(--ink-2)', lineHeight: 1.45 }}>მონიშნე ერთი ან მეტი. შენთვის საინტერესო კუპონები სიის თავში ამოვა. მანამდე სია ფასით ლაგდება.</div>}
+        {interests.length === 0 && <div className="small" style={{ marginTop: 8, color: 'var(--ink-2)', lineHeight: 1.45 }}>მონიშნე ერთი ან მეტი. მანამდე სია ფასით ლაგდება.</div>}
       </div>
 
       {/* offers */}
@@ -111,13 +108,11 @@ export function Points() {
                     <span className="chip" style={{ padding: '2px 8px', background: '#e3f4e8', color: '#2f7a4c', fontSize: 12 }}>{x.badge}</span>
                   </div>
                   <div className="small" style={{ marginTop: 2 }}>{x.offer}</div>
-                  <div className="tiny muted">{x.cost} ქულა{forYou ? ' · შენი ინტერესებიდან' : ''}</div>
+                  <div className="tiny muted">{x.cost} ქულა</div>
                 </div>
-                {can ? (
+                {can && (
                   <motion.button whileTap={{ scale: 0.94 }} onClick={() => setPick(x)} className="chip"
                     style={{ background: '#ffc94a', color: '#3b2a00', fontWeight: 800, padding: '8px 12px', flexShrink: 0 }}>აღება</motion.button>
-                ) : (
-                  <span className="tiny" aria-disabled="true" style={{ color: 'var(--ink-3)', fontWeight: 700, flexShrink: 0, textAlign: 'right', maxWidth: 70, lineHeight: 1.3 }}>აკლია {x.cost - points} ქულა</span>
                 )}
               </motion.div>
             )
@@ -136,7 +131,7 @@ export function Points() {
           ))}
         </div>
         <div className="small" style={{ marginTop: 12, background: '#fff7e0', borderRadius: 12, padding: '10px 12px', lineHeight: 1.5 }}>
-          ქულას ვერ მიიღებ ხარჯვით, სესხის აღებით ან უბრალოდ აპის გახსნით. ქულა ფული არ არის და შენს ბალანსზე არ არის დამოკიდებული. კუპონი არ მოქმედებს სესხით, განვადებით, საკრედიტო ბარათით ან ოვერდრაფტით გადახდისას.
+          ქულას ვერ მიიღებ ხარჯვით, სესხით ან აპის გახსნით.
         </div>
         {(g.pointsLog ?? []).length > 0 && (
           <>
@@ -161,11 +156,10 @@ export function Points() {
             <div className="card" style={{ background: '#f4f9ff', fontSize: 14, lineHeight: 1.5, textAlign: 'left' }}>
               ფასდაკლება ფულს მხოლოდ მაშინ გიზოგავს, თუ ამის ყიდვას ისედაც აპირებდი. თუ არა, ქულები შეინახე.
             </div>
-            <div className="small">ფასი: <b>{pick.cost} ქულა</b> · დაგრჩება {points - pick.cost} ქულა</div>
+            <div className="small">დაგრჩება <b>{points - pick.cost} ქულა</b></div>
             <div className="tiny muted" style={{ textAlign: 'left', lineHeight: 1.5 }}>პირობები: {TERMS}</div>
             <button className="pill-btn btn-sun" onClick={() => { const code = redeem(pick.id, today); if (code) setDone({ code, x: pick }); setPick(null) }}>კუპონის აღება · {pick.cost} ქულა</button>
             <button className="pill-btn btn-ghost" onClick={() => setPick(null)}>ჯერ არა</button>
-            <div className="tiny muted">პარტნიორები დემოსთვის გამოგონილია.</div>
           </div>
         )}
       </Sheet>
@@ -178,9 +172,8 @@ export function Points() {
             <div className="display" style={{ fontSize: 22, fontWeight: 800 }}>კუპონი შენია!</div>
             <div>{done.x.name}: {done.x.offer}</div>
             <div style={{ fontFamily: 'monospace', fontSize: 24, fontWeight: 800, letterSpacing: 2, padding: 12, borderRadius: 14, border: '2px dashed #e0c36a', background: '#fffaf0' }}>{done.code}</div>
-            <div className="small muted" style={{ lineHeight: 1.5 }}>გადახდისას ეს კოდი პარტნიორს აჩვენე. მოქმედებს 30 დღე. კუპონს ყოველთვის იპოვი აქვე, „ჩემს კუპონებში".</div>
+            <div className="small muted" style={{ lineHeight: 1.5 }}>გადახდისას კოდი პარტნიორს აჩვენე. მას „ჩემს კუპონებშიც“ იპოვი.</div>
             <button className="pill-btn btn-sun" onClick={() => setDone(null)}>კარგი</button>
-            <div className="tiny muted">დემო კოდი. პარტნიორები გამოგონილია.</div>
           </div>
         )}
       </Sheet>

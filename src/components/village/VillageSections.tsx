@@ -1,47 +1,28 @@
 import { ReactNode, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Game, LANDMARKS, COSMETIC_POOL, evolutionStage } from '../../state/store'
+import { Game, LANDMARKS, COSMETIC_POOL, evolutionStage, useStore, type Tab } from '../../state/store'
 import { Jikho, STAGE_NAMES } from '../Jikho'
 import { Sheet, Progress } from '../ui'
 import {
   PlaceId, PLACE_BOX, TowerPlace, SchoolPlace, CellarPlace, StationPlace, BridgePlace, Stream,
   TOWER_MAX, BRIDGE_MAX, STATION_MAX, BOOKS_PER_TOPIC, INSTRUMENTS, jarPct,
 } from './Places'
-import { PLACE_ICON } from './VillageScene'
 
-/* ───────────────────────── stage progress ───────────────────────── */
+/* ───────────────────────── Jikho tips ───────────────────────── */
 
-/** „მგზავრი" → „მგზავრამდე" */
-const until = (name: string) => name.slice(0, -1) + 'ამდე'
-
-export function stageProgress(g: Game): { text: string; value: number; max: number } {
-  const s = evolutionStage(g)
-  if (s === 0) {
-    const need = Math.max(0, 3 - g.stones)
-    return { text: `${until(STAGE_NAMES[1])}: კიდევ ${need} ქვა ან ერთი დალუქული ქვევრი`, value: g.stones, max: 3 }
-  }
-  if (s === 1) {
-    const needS = Math.max(0, 6 - g.stones)
-    const needT = Math.max(0, 3 - g.topics)
-    const parts = [needS ? `${needS} ქვა` : '', needT ? `${needT} თემა` : ''].filter(Boolean)
-    return { text: `${until(STAGE_NAMES[2])}: კიდევ ${parts.join(' და ')}`, value: Math.min(g.stones, 6) + Math.min(g.topics, 3), max: 9 }
-  }
-  if (s === 2) {
-    return { text: `${until(STAGE_NAMES[3])}: კიდევ ${Math.max(0, 12 - g.stones)} ქვა`, value: g.stones, max: 12 }
-  }
-  return { text: 'უმაღლესი საფეხური — ჯიხო სოფლის უხუცესია ✓', value: 1, max: 1 }
-}
-
-/** short lines Jikho says when tapped */
+/** short lines Jikho says when tapped (the stage lives here now, not in a card) */
 export function jikhoTips(g: Game, hardship: boolean): string[] {
-  const tips: string[] = []
-  if (hardship) tips.push('ახლა დასვენების დროა. სოფელი გაყინულია — არაფერი ინგრევა.')
-  tips.push(stageProgress(g).text + '.')
+  const s = evolutionStage(g)
+  const stage = s < 3 ? `მე ახლა ${STAGE_NAMES[s]} ვარ. შემდეგი — ${STAGE_NAMES[s + 1]}.` : 'მე სოფლის უხუცესი ვარ ✓'
+  // support mode: calm lines only, no countdowns
+  if (hardship) return ['ახლა დასვენების დროა. არაფერი იკარგება.', stage]
   const n = Math.min(TOWER_MAX, g.stones)
-  tips.push(n < TOWER_MAX ? `კოშკს ${TOWER_MAX - n} ქვა აკლია. ქვას იღებ, როცა ხელფასის დღეს უსაფრთხო ზღვარზე მეტი გრჩება.` : 'კოშკი დავასრულეთ! სახურავიც ადგას.')
-  tips.push(`კიდევ ${BOOKS_PER_TOPIC - (g.books % BOOKS_PER_TOPIC)} დილის გაკვეთილი და სკოლაში ახალი ფანჯარა აინთება.`)
-  tips.push('შესყიდვამდე შემოწმება ხიდს ფიცარს მატებს — მთავარია შემოწმება, არა ის, იყიდი თუ არა.')
-  return tips
+  return [
+    stage,
+    n < TOWER_MAX ? `კოშკს ${TOWER_MAX - n} ქვა აკლია!` : 'კოშკი დავასრულეთ! სახურავიც ადგას.',
+    `კიდევ ${BOOKS_PER_TOPIC - (g.books % BOOKS_PER_TOPIC)} დილა — და სკოლაში ფანჯარა აინთება.`,
+    'შემოწმება ხიდს ფიცარს მატებს — იყიდი თუ არა, სულ ერთია.',
+  ]
 }
 
 /* ───────────────────────── place sheet ───────────────────────── */
@@ -97,7 +78,7 @@ function Meter({ label, right, value, max, color, next }: { label: string; right
         {right && <span className="muted" style={{ fontWeight: 700 }}>{right}</span>}
       </div>
       <Progress value={value} max={max} color={color} />
-      {next && <div className="small" style={{ marginTop: 9, color: 'var(--ink-2)' }}>შემდეგი: {next}</div>}
+      {next && <div className="small" style={{ marginTop: 9, color: 'var(--ink-2)' }}>{next}</div>}
     </div>
   )
 }
@@ -111,46 +92,50 @@ const TITLES: Record<PlaceId, string> = {
 }
 
 const GROWS: Record<PlaceId, string> = {
-  tower: 'თუ ხელფასის დღეს უსაფრთხო ზღვარზე მეტი გრჩება, კოშკს ერთი ქვა ემატება. ქვა არასდროს იკარგება.',
-  school: 'ყოველი დასრულებული დილის გაკვეთილი სკოლას ერთ წიგნს მატებს. ყოველი 6 წიგნის შემდეგ თემა ათვისებულია და ახალ ოთახში შუქი ინთება.',
-  cellar: 'ქვევრი მხოლოდ მაშინ ივსება, როცა დანაზოგში რეალურად გადარიცხავ ფულს. პროგრესი შენი შემოსავლის წილით ითვლება, ამიტომ დიდი თანხა უპირატესობას არ გაძლევს.',
-  station: 'სადგური იზრდება, როცა გადასახადს ადასტურებ, მაღაზიას მონიშნავ ან ნაღდ ხარჯს ჩაწერ. ასე პროგნოზი უფრო ზუსტი ხდება.',
-  bridge: 'ყოველი შემოწმება შესყიდვამდე ხიდს ერთ ფიცარს მატებს — სულერთია, მერე იყიდი თუ არა. დღეში მაქსიმუმ 3 ფიცარი.',
+  tower: 'თუ ხელფასის დღეს უსაფრთხო ზღვარზე მეტი დაგრჩა, კოშკს ერთი ქვა ემატება. ქვა არ იკარგება.',
+  school: 'დილის 3 კითხვა = 1 წიგნი. 6 წიგნი = სკოლაში ახალი ფანჯარა.',
+  // the jar fills by filled / target (jarPct): the user's own goal, not the size of the amount
+  cellar: 'ქვევრი ივსება, როცა დანაზოგში ფულს რეალურად გადადებ. პროგრესი შენი მიზნის პროცენტით ითვლება, ამიტომ დიდი თანხა უპირატესობას არ გაძლევს.',
+  station: 'სადგური იზრდება, როცა გადასახადს დაადასტურებ, მაღაზიას მონიშნავ ან ნაღდ ხარჯს ჩაწერ — პროგნოზი ზუსტდება.',
+  bridge: 'შესყიდვამდე შემოწმება = 1 ფიცარი — იყიდი თუ არა, სულ ერთია. დღეში მაქსიმუმ 3.',
 }
 
-function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
+/** one useful next step per place; none of them rewards spending */
+const ACTION: Record<PlaceId, { label: string; tab: Tab }> = {
+  tower: { label: 'პროგნოზის ნახვა', tab: 'road' },
+  school: { label: 'დილის 3 კითხვა', tab: 'day' },
+  cellar: { label: 'მიზანი ჯიხოსთან', tab: 'chat' },
+  station: { label: 'გადასახადების დადასტურება', tab: 'analytics' },
+  bridge: { label: 'შესყიდვის შემოწმება', tab: 'road' },
+}
+
+function PlaceBody({ id, game, calm }: { id: PlaceId; game: Game; calm: boolean }): ReactNode {
+  // calm = support mode: show where things stand, never "N more to go"
   if (id === 'tower') {
     const n = Math.min(TOWER_MAX, game.stones)
     return (
-      <Meter label={`${n}/${TOWER_MAX} ქვა`} right="უსაფრთხო ხელფასის დღეები" value={n} max={TOWER_MAX} color="#a39478"
-        next={n < TOWER_MAX ? `კიდევ ${TOWER_MAX - n} ქვა — და კოშკს სახურავი დაედგმება.` : 'კოშკი დასრულდა — სახურავი ადგას!'} />
+      <Meter label={`${n}/${TOWER_MAX} ქვა`} value={n} max={TOWER_MAX} color="#a39478"
+        next={n >= TOWER_MAX ? 'კოშკი დასრულდა — სახურავი ადგას!' : calm ? undefined : `კიდევ ${TOWER_MAX - n} — და კოშკს სახურავი დაედგმება.`} />
     )
   }
   if (id === 'school') {
     const inRoom = game.books % BOOKS_PER_TOPIC
     return (
-      <>
-        <div className="row" style={{ gap: 8, marginTop: 10 }}>
-          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>{game.books} წიგნი</span>
-          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>{game.topics} ათვისებული თემა</span>
-        </div>
-        <Meter label={`${inRoom}/${BOOKS_PER_TOPIC} წიგნი`} right="შემდეგ ოთახამდე" value={inRoom} max={BOOKS_PER_TOPIC} color="#2a9d8f"
-          next={`კიდევ ${BOOKS_PER_TOPIC - inRoom} დილის გაკვეთილი — და ახალი ფანჯარა აინთება.`} />
-      </>
+      <Meter label={`${inRoom}/${BOOKS_PER_TOPIC} წიგნი`} value={inRoom} max={BOOKS_PER_TOPIC} color="#2a9d8f"
+        next={calm ? undefined : `კიდევ ${BOOKS_PER_TOPIC - inRoom} დილა — და ფანჯარა აინთება.`} />
     )
   }
   if (id === 'cellar') {
     if (!game.qvevri.length) {
-      return <div className="card small" style={{ marginTop: 10, lineHeight: 1.5 }}>ჯერ ქვევრი არ გაქვს. ჯიხოსთან ერთად დანაზოგის მიზანი დაისახე — და მარანში პირველი ქვევრი გაჩნდება.</div>
+      return <div className="card small" style={{ marginTop: 10, lineHeight: 1.5 }}>ჯერ ქვევრი არ გაქვს. ჯიხოსთან დანაზოგის მიზანი დაისახე — და პირველი ქვევრი გაჩნდება.</div>
     }
     return (
       <>
         {game.qvevri.map((q, i) => {
           const pct = Math.round(jarPct(q) * 100)
-          const nextMark = [25, 50, 75, 100].find(m => m > pct) ?? 100
           return (
             <Meter key={i} label={q.name} right={q.sealedAt ? 'დალუქულია' : `${pct}%`} value={pct} max={100} color="#e9a23b"
-              next={q.sealedAt ? `დაილუქა: ${q.sealedAt}. ახალი მიზანი — ახალი ქვევრი.` : `შემდეგი ნიშნული: ${nextMark}%. 100%-ზე ქვევრი ილუქება.`} />
+              next={q.sealedAt ? `დაილუქა: ${q.sealedAt}. ახალი მიზანი — ახალი ქვევრი.` : calm ? undefined : '100%-ზე ქვევრი დაილუქება.'} />
           )
         })}
       </>
@@ -161,8 +146,7 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
     const xpLeft = Math.max(1, 3 - game.stationXp)
     return (
       <>
-        <Meter label={`დონე ${lv}/${STATION_MAX}`} right={lv < STATION_MAX ? `შემდეგ დონემდე: ${xpLeft} დადასტურება` : 'სრულად აღჭურვილი'} value={lv} max={STATION_MAX} color="var(--sky)"
-          next={lv < STATION_MAX ? `შემდეგი ხელსაწყო: ${INSTRUMENTS[lv]}.` : 'თეფში დამონტაჟდა — სადგური სრულადაა აღჭურვილი ✓'} />
+        <Meter label={`${lv}/${STATION_MAX} ხელსაწყო`} right={lv >= STATION_MAX ? 'სრულადაა აღჭურვილი ✓' : calm ? undefined : `კიდევ ${xpLeft} დადასტურება`} value={lv} max={STATION_MAX} color="var(--sky)" />
         <div className="card" style={{ marginTop: 10, padding: '10px 14px' }}>
           {INSTRUMENTS.map((name, i) => (
             <div key={name} className="between small" style={{ padding: '5px 0', borderTop: i ? '1px solid var(--line)' : undefined, color: i < lv ? 'var(--ink)' : 'var(--ink-3)', fontWeight: i < lv ? 700 : 600 }}>
@@ -176,32 +160,37 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
   }
   const n = Math.min(BRIDGE_MAX, game.planks)
   return (
-    <>
-      <Meter label={`${n}/${BRIDGE_MAX} ფიცარი`} right={`დღეს: ${Math.min(3, game.checksToday)}/3`} value={n} max={BRIDGE_MAX} color="#c08552"
-        next={n < BRIDGE_MAX ? `კიდევ ${BRIDGE_MAX - n} ფიცარი — და ხიდი მეორე ნაპირს მიაღწევს.` : 'ხიდი გადებულია და ფარნები ანთია ✓'} />
-    </>
+    <Meter label={`${n}/${BRIDGE_MAX} ფიცარი`} right={calm ? undefined : `დღეს ${Math.min(3, game.checksToday)}/3`} value={n} max={BRIDGE_MAX} color="#c08552"
+      next={n >= BRIDGE_MAX ? 'ხიდი გადებულია და ფარნები ანთია ✓' : calm ? undefined : `კიდევ ${BRIDGE_MAX - n} — და ხიდი მეორე ნაპირს მიაღწევს.`} />
   )
 }
 
-export function PlaceSheet({ place, game, onClose }: { place: PlaceId | null; game: Game; onClose: () => void }) {
+export function PlaceSheet({ place, game, calm = false, onClose }: { place: PlaceId | null; game: Game; calm?: boolean; onClose: () => void }) {
+  const setTab = useStore(s => s.setTab)
+  const setAnalyticsSeg = useStore(s => s.setAnalyticsSeg)
   // keep the last place rendered while the sheet animates out
   const [shown, setShown] = useState<PlaceId>('tower')
   useEffect(() => { if (place) setShown(place) }, [place])
   const id = place ?? shown
+  const act = ACTION[id]
+  const go = () => {
+    onClose()
+    if (act.tab === 'analytics') setAnalyticsSeg('payday')
+    setTab(act.tab)
+  }
   return (
     <Sheet open={!!place} onClose={onClose}>
       <Hero key={id} id={id} game={game} />
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-        <div className="row" style={{ marginTop: 14, gap: 8 }}>
-          <span style={{ fontSize: 24 }}>{PLACE_ICON[id]}</span>
+        <div className="between" style={{ marginTop: 14 }}>
           <div className="h2">{TITLES[id]}</div>
+          <button onClick={onClose} aria-label="დახურვა" className="muted" style={{ fontSize: 18, fontWeight: 700, padding: '2px 6px' }}>✕</button>
         </div>
         <div style={{ fontSize: 14, lineHeight: 1.55, marginTop: 6, color: 'var(--ink-2)' }}>
           <b style={{ color: 'var(--ink)' }}>რა ზრდის: </b>{GROWS[id]}
         </div>
-        <PlaceBody id={id} game={game} />
-        <div className="tiny muted" style={{ textAlign: 'center', marginTop: 12 }}>სოფელს მხოლოდ შენი ქცევა ზრდის — არა ხარჯი, სესხი ან ანგარიშზე არსებული თანხა.</div>
-        <button className="pill-btn btn-ghost" style={{ marginTop: 12 }} onClick={onClose}>კარგი</button>
+        <PlaceBody id={id} game={game} calm={calm} />
+        <button className="pill-btn btn-ghost" style={{ marginTop: 14 }} onClick={go}>{act.label} ›</button>
       </motion.div>
     </Sheet>
   )
@@ -254,9 +243,8 @@ export function YearMap({ cycles }: { cycles: number }) {
               {unlocked ? l.icon : winter ? '❄' : '?'}
             </div>
             <div className="tiny" style={{ fontWeight: 800, marginTop: 4, color: unlocked ? 'var(--ink)' : 'var(--ink-3)' }}>
-              {unlocked ? l.name : next ? 'შემდეგი' : '???'}
+              {unlocked ? l.name : next ? 'შემდეგი' : ''}
             </div>
-            {winter && <div style={{ fontSize: 9.5, lineHeight: 1.15, color: '#5f86ad', fontWeight: 700 }}>ზამთრის გადასასვლელი</div>}
           </motion.div>
         )
       })}

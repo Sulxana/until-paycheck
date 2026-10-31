@@ -65,11 +65,12 @@ export function App() {
         <Jikho size={84} mood="happy" stage={1} accessories={['scarf']} />
         <h1 style={{ fontSize: 34, marginTop: 6 }}>ხელფასამდე</h1>
         <div className="sub" style={{ fontSize: 15 }}>შენი ფულის ამინდის პროგნოზი</div>
-        <p>მუშა პროტოტიპი სინთეტიკურ მონაცემებზე. ძრავა ბრაუზერში ითვლის — იგივე რიცხვები, რაც ჩვენს ცხრილში.</p>
-        <ol style={{ paddingLeft: 18, margin: '10px 0', display: 'grid', gap: 6 }}>
-          <li><b>გზა:</b> „რამის ყიდვა გინდა?" → 100 ₾</li>
+        <p>მუშა პროტოტიპი გამოგონილ მონაცემებზე. ყველა რიცხვი ფორმულით ითვლება.</p>
+        <div style={{ fontWeight: 800, marginTop: 10 }}>სცადე:</div>
+        <ol style={{ paddingLeft: 18, margin: '6px 0 10px', display: 'grid', gap: 6 }}>
+          <li><b>გზა:</b> „ყიდვამდე შეამოწმე" → 100 ₾</li>
           <li><b>ჯიხო:</b> „1 200 ₾-ის ტელეფონი განვადებით"</li>
-          <li>„და თუ აპრილამდე დავიცადო?"</li>
+          <li><b>ჯიხო:</b> „და თუ აპრილამდე დავიცადო?"</li>
           <li><b>⏩ შემდეგი დღე</b> — ხელფასამდე</li>
         </ol>
         <div className="row" style={{ gap: 14, margin: '18px 0' }}>

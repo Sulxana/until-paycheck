@@ -112,6 +112,8 @@ interface Store {
   learn: (topic: TopicId, correct: boolean) => void
   /** a finished 30-second micro-lesson: adds its rule to "ჩემი წესები" */
   microDone: (topic: TopicId) => void
+  /** "📌 წესის შენახვა" under a quiz answer: adds the topic's rule to "ჩემი წესები" (points only if it is new) */
+  saveRule: (topic: TopicId) => void
   /** a finished knowledge check */
   checkupDone: (score: number, label: string) => void
   /** exchange a partner's point price for its coupon */
@@ -278,6 +280,13 @@ export const useStore = create<Store>()(
           const fresh = !g.rules.includes(topic)
           patchGame(gg => ({ rules: fresh ? [...gg.rules, topic] : gg.rules, mastery: { ...gg.mastery, [topic]: Math.min(100, (gg.mastery[topic] ?? 0) + 8) } }))
           if (fresh) { const pt = earn(5, '30-წამიანი გაკვეთილი'); get().toast('📗', `ახალი წესი დაემატა „ჩემს წესებში"${pt}`) }
+        },
+        saveRule: topic => {
+          const g = get().games[get().personaId]
+          if (g.rules.includes(topic)) { get().toast('📌', 'ეს წესი უკვე „ჩემს წესებშია"'); return }
+          patchGame(gg => ({ rules: [...gg.rules, topic] }))
+          const pt = earn(5, 'ახალი წესი')
+          get().toast('📌', `შენახულია „ჩემს წესებში"${pt}`)
         },
         checkupDone: (score, label) => {
           const g = get().games[get().personaId]

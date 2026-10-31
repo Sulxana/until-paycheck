@@ -4,7 +4,7 @@ import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL, STREAK_GOAL, STREAK
 import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { RoadScene } from '../components/RoadScene'
 import { Jikho, JikhoMood } from '../components/Jikho'
-import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI } from '../components/ui'
+import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI, WCOLOR, InfoButton, InfoBox } from '../components/ui'
 import { BANK_META, PERSONAS } from '../engine/personas'
 import { WeatherKind, WEATHER_LABEL } from '../engine/engine'
 import { TowerPlace } from '../components/village/Places'
@@ -13,7 +13,8 @@ import { LearnLink } from '../components/learn/LearnLink'
 
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
-const signed = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v))
+/** range without a "+" sign, so a balance never reads as a gain */
+const span = (lo: number, hi: number) => (lo < 0 ? `${fmt(lo)} … ${fmt(hi)} ₾` : rangeText(lo, hi))
 
 export function daysOfSpendText(p50: number, avg: number) {
   const d = p50 / avg
@@ -24,10 +25,10 @@ export function daysOfSpendText(p50: number, avg: number) {
 
 export function jikhoLine(w: WeatherKind): string {
   return {
-    sun: 'გზა მზიანია! ამ ტემპით ხელფასამდე უპრობლემოდ ჩავალთ.',
-    cloud: 'ცოტა ღრუბლიანია, მაგრამ გზა გასავლელია. ხარჯებს თვალი ვადევნოთ.',
-    rain: 'წვიმს… ხელფასამდე ფული ცოტაა. ქოლგა მზად მაქვს.',
-    storm: 'ქარიშხალია: ხელფასამდე ფული სავარაუდოდ არ გეყოფა. გადაწყვეტილება შენია, მე მხოლოდ ამინდს გაჩვენებ.',
+    sun: 'მზიანია! ამ ტემპით ხელფასამდე ჩავალთ.',
+    cloud: 'ცოტა ღრუბლიანია, მაგრამ გასავლელია.',
+    rain: 'წვიმს… ხელფასამდე ფული ცოტაა.',
+    storm: 'ხელფასამდე ფული შეიძლება არ გეყოს. გადაწყვეტილება შენია.',
   }[w]
 }
 export const moodFor = (w: WeatherKind): JikhoMood => (w === 'sun' ? 'happy' : w === 'cloud' ? 'calm' : 'worried')
@@ -45,6 +46,7 @@ export function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [streakOpen, setStreakOpen] = useState(false)
   const [preview, setPreview] = useState<WeatherKind | null>(null)
+  const [infoOpen, setInfoOpen] = useState(false)
   const stage = evolutionStage(game)
   const weather = preview ?? v.weather
   const idx = e.demoPathIndex()
@@ -53,10 +55,9 @@ export function Home() {
   const [hop, setHop] = useState(0)
   const tipIdx = useRef(0)
   const tips = [
-    'ეს გზა ხელფასამდეა: ყოველი ქვა ერთი დღეა, ზემოთ კი ამინდი — შენი ფულის პროგნოზი.',
-    v.hardship ? 'ერთად დავალაგოთ გადასახადები. არაფერი იკარგება: სერიაც და სოფელიც ადგილზეა.' : jikhoLine(v.weather),
-    v.safeToday > 0 ? `ხელფასამდე ${v.daysLeft} დღეა. ჩვეულებრივი ხარჯის გარდა დღეს კიდევ ~${v.safeToday} ₾ შეგიძლია დახარჯო.` : `ხელფასამდე ${v.daysLeft} დღეა. ამ დღეებში ფული მხოლოდ აუცილებელ ხარჯებს ჰყოფნის.`,
-    'რამის ყიდვას აპირებ? ჯერ შეამოწმე, და სოფლის ხიდს ფიცარი დაემატება.',
+    'ყოველი ქვა — ერთი დღე. ამინდი — შენი ფულის პროგნოზი.',
+    v.hardship ? 'ერთად დავალაგოთ გადასახადები.' : jikhoLine(v.weather),
+    'ყიდვამდე შეამოწმე — ხიდს ფიცარი დაემატება.',
     'დილის 3 კითხვა ფარანს ანთებს და სოფლის სკოლას წიგნს მატებს.',
     'განვადებაზე ფიქრობ? მკითხე და ყველა ვადას შენს თვეებზე გაჩვენებ.',
   ]
@@ -98,7 +99,7 @@ export function Home() {
       </div>
 
       <div style={{ position: 'relative' }}>
-        <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} bubble={preview ? null : bubble} onJikhoTap={tapJikho} hop={hop} />
+        <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} bubble={preview ? null : bubble} onJikhoTap={tapJikho} hop={hop} calm={v.hardship} />
         {/* time machine */}
         <div style={{ position: 'absolute', right: 12, bottom: 50, zIndex: 2 }} className="row">
           {!demo.finished ? (
@@ -116,28 +117,28 @@ export function Home() {
         <motion.div className="card" layout style={{ padding: 18 }}>
           {v.hardship && (
             <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', marginBottom: 12, fontSize: 13 }}>
-              <b>მხარდაჭერის რეჟიმი.</b> სერია გაყინულია და არაფერი იკარგება. ჯიხო გაჩვენებს, რომელი გადასახადი დაფარო პირველად და როგორ ესაუბრო ბანკს.
+              ❄️ <b>მხარდაჭერის რეჟიმი:</b> არაფერი იკარგება. ჯიხო გაჩვენებს, რომელი გადასახადი დაფარო პირველად და როგორ ესაუბრო ბანკს.
             </div>
           )}
           <div className="between">
             <div className="muted small" style={{ fontWeight: 700 }}>{demo.finished ? 'ხელფასის დღეს გქონდა' : 'ხელფასის დღეს სავარაუდოდ დაგრჩება'}</div>
             <div className="small muted">{demo.finished ? p.paydayLabel : `${v.daysLeft} დღე დარჩა`}</div>
           </div>
-          <div className="row" style={{ alignItems: 'baseline', gap: 8, marginTop: 6 }}>
-            <motion.div key={v.landing.p50} initial={{ opacity: 0.4, y: 6 }} animate={{ opacity: 1, y: 0 }} className="big">
-              {demo.finished ? gel(Math.round(v.balance)) : `~${fmt(r10(v.landing.p50))} ₾`}
-            </motion.div>
-            {!demo.finished && <div className="muted small">შეიძლება {rangeText(r10(v.landing.p10), r10(v.landing.p90))}</div>}
-          </div>
+          <motion.div key={v.landing.p50} initial={{ opacity: 0.4, y: 6 }} animate={{ opacity: 1, y: 0 }} className="big" style={{ marginTop: 6 }}>
+            {demo.finished ? gel(Math.round(v.balance)) : `~${fmt(r10(v.landing.p50))} ₾`}
+          </motion.div>
           {!demo.finished && (
             <>
-              <div style={{ marginTop: 10 }}><WeatherChip w={v.weather} /></div>
-              <div className="small" style={{ marginTop: 8, color: 'var(--ink-2)' }}>ასეთი 10 თვიდან <b>{v.landing.inTen}-ში</b> ხელფასამდე უსაფრთხო ზღვარს ({gel(e.cushion)}) ქვემოთ ჩადიხარ. ზღვარი შენი 3 დღის ხარჯია.</div>
-              <RangeBar p10={v.landing.p10} p50={v.landing.p50} p90={v.landing.p90} cushion={e.cushion} />
-              <div className="between tiny muted" style={{ marginTop: 4 }}>
-                <span>{p.historyMonths} თვის ისტორიიდან · სიზუსტე {'●'.repeat(p.confidence)}{'○'.repeat(5 - p.confidence)}</span>
-                <span>{daysOfSpendText(v.landing.p50, e.avgDaily)}</span>
+              <div className="row" style={{ marginTop: 10, gap: 6, alignItems: 'center' }}>
+                <WeatherChip w={v.weather} p={v.landing.inTen / 10} />
+                <InfoButton open={infoOpen} onClick={() => setInfoOpen(o => !o)} />
               </div>
+              <RangeBar p10={v.landing.p10} p50={v.landing.p50} p90={v.landing.p90} cushion={e.cushion} mid={false} />
+              <InfoBox open={infoOpen}>
+                <div>ზოლი — სად შეიძლება აღმოჩნდე: {span(r10(v.landing.p10), r10(v.landing.p90))}</div>
+                <div>ზღვარი ({gel(e.cushion)}) — უსაფრთხო მარაგი, შენი 3 დღის ხარჯი.</div>
+                <div className="muted">{p.historyMonths} თვის ისტორიიდან · სიზუსტე {'●'.repeat(p.confidence)}{'○'.repeat(5 - p.confidence)}</div>
+              </InfoBox>
             </>
           )}
         </motion.div>
@@ -147,9 +148,9 @@ export function Home() {
       {!demo.finished && (
         <div className="pad" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
           <div className="card" style={{ padding: 14 }}>
-            <div className="tiny muted" style={{ fontWeight: 700 }}>დღეს დამატებით შეგიძლია</div>
+            <div className="tiny muted" style={{ fontWeight: 700 }}>დღის თავისუფალი თანხა</div>
             <div style={{ fontSize: 24, fontWeight: 800 }}>~{gel(v.safeToday)}</div>
-            <div className="tiny muted">ჩვეულებრივი ხარჯის გარდა</div>
+            <div className="tiny muted">ჩვეული ხარჯის გარდა</div>
           </div>
           <div className="card" style={{ padding: 14 }}>
             <div className="tiny muted" style={{ fontWeight: 700 }}>შემდეგი გადასახადი</div>
@@ -165,8 +166,18 @@ export function Home() {
         </div>
       )}
 
+      {/* actions: above the banks, so they are visible without scrolling */}
+      <div className="pad" style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+        {!demo.finished && (
+          <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-sun" onClick={() => setBuyOpen(true)}>ყიდვამდე შეამოწმე</motion.button>
+        )}
+        <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-white" onClick={() => setTab('chat')}>
+          <Jikho size={30} mood="talking" stage={stage} bob={false} /> განვადება ან სესხი? ჰკითხე ჯიხოს
+        </motion.button>
+      </div>
+
       {/* banks */}
-      <div className="pad" style={{ marginTop: 12 }}>
+      <div className="pad" style={{ marginTop: 16 }}>
         <div className="between" style={{ marginBottom: 8 }}>
           <span className="small" style={{ fontWeight: 800 }}>ახლა ანგარიშებზე: {gel(Math.round(v.balance))}</span>
           <span className="tag">{p.balances.length + (p.savings ? 1 : 0)} ბანკის ამონაწერიდან</span>
@@ -177,16 +188,6 @@ export function Home() {
           {p.overdraft && <span className="chip" style={{ background: '#fdecea', color: '#b4413b' }}>ოვერდრაფტი {gel(p.overdraft.used)} / {gel(p.overdraft.limit)}</span>}
         </div>
         {v.extra > 0 && <div className="tiny muted" style={{ marginTop: 6 }}>ამ თვეში ჩაწერილი შესყიდვები: {gel(v.extra)}</div>}
-      </div>
-
-      {/* actions */}
-      <div className="pad" style={{ marginTop: 16, display: 'grid', gap: 10 }}>
-        {!demo.finished && (
-          <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-sun" onClick={() => setBuyOpen(true)}>რამის ყიდვა გინდა? შეამოწმე</motion.button>
-        )}
-        <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-white" onClick={() => setTab('chat')}>
-          <Jikho size={30} mood="talking" stage={stage} bob={false} /> განვადება ან სესხი? ჰკითხე ჯიხოს
-        </motion.button>
       </div>
 
       {/* quest */}
@@ -220,6 +221,7 @@ function PurchaseSheet({ open, onClose, onPreview }: { open: boolean; onClose: (
   const reward = useStore(s => s.reward)
   const buy = useStore(s => s.buy)
   const toast = useStore(s => s.toast)
+  const gameOff = useStore(s => s.gameOff)
   const stage = evolutionStage(useStore(s => s.games[p.id]))
   const [amount, setAmount] = useState('100')
   const [result, setResult] = useState<null | { amount: number; p10: number; p50: number; p90: number; pBelow: number; weather: WeatherKind; inTen: number; afterPayday: number }>(null)
@@ -258,29 +260,31 @@ function PurchaseSheet({ open, onClose, onPreview }: { open: boolean; onClose: (
           </motion.div>
         ) : (
           <motion.div key="out" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="row" style={{ justifyContent: 'center', gap: 14, fontSize: 40, margin: '4px 0 6px' }}>
-              <span>{WEMOJI[v.weather]}</span>
-              <motion.span initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: 24, color: 'var(--ink-3)' }}>→</motion.span>
-              <motion.span initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, type: 'spring' }}>{WEMOJI[result.weather]}</motion.span>
+            <div className="row" style={{ justifyContent: 'center', alignItems: 'flex-start', gap: 14, margin: '4px 0 6px' }}>
+              <div style={{ textAlign: 'center' }}><div style={{ fontSize: 40 }}>{WEMOJI[v.weather]}</div><div className="tiny muted" style={{ fontWeight: 700 }}>{WEATHER_LABEL[v.weather]}</div></div>
+              <motion.span initial={{ x: -10, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }} style={{ fontSize: 24, color: 'var(--ink-3)', marginTop: 12 }}>→</motion.span>
+              <motion.div initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, type: 'spring' }} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 40 }}>{WEMOJI[result.weather]}</div><div className="tiny" style={{ fontWeight: 800, color: WCOLOR[result.weather] }}>{WEATHER_LABEL[result.weather]}</div>
+              </motion.div>
             </div>
-            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 18 }}>{WEATHER_LABEL[v.weather]} → {WEATHER_LABEL[result.weather]}</div>
-            <div className="card" style={{ marginTop: 12, fontSize: 15, lineHeight: 1.55 }}>
-              თუ დღეს <b>{gel(result.amount)}</b> დახარჯავ, ხელფასის დღეს სავარაუდოდ <b>~{fmt(r5(result.p50))} ₾</b> დაგრჩება ({signed(r5(result.p10))}…{signed(r5(result.p90))}) — {daysOfSpendText(result.p50, e.avgDaily)}. 10 მსგავსი თვიდან <b>{result.inTen}-ში</b> {fmt(e.cushion)}-ლარიან ზღვარს ქვემოთ ჩახვიდოდი. ხელფასი {v.daysLeft} დღეშია.
-              <RangeBar p10={result.p10} p50={result.p50} p90={result.p90} cushion={e.cushion} compare={{ p10: v.landing.p10, p50: v.landing.p50, p90: v.landing.p90 }} />
+            <div className="card" style={{ marginTop: 10, textAlign: 'center' }}>
+              <div className="small muted" style={{ fontWeight: 700 }}>თუ დღეს {gel(result.amount)} დახარჯავ, ხელფასის დღეს დაგრჩება</div>
+              <div className="big" style={{ marginTop: 4 }}>~{fmt(r5(result.p50))} ₾</div>
+              <div className="small" style={{ fontWeight: 700, color: 'var(--ink-2)', marginTop: 2 }}>10-დან {result.inTen} თვე ზღვარს ქვემოთ</div>
+              <RangeBar p10={result.p10} p50={result.p50} p90={result.p90} cushion={e.cushion} compare={{ p10: v.landing.p10, p50: v.landing.p50, p90: v.landing.p90 }} mid={false} />
             </div>
             <div className="chip" style={{ marginTop: 10, whiteSpace: 'normal', background: result.afterPayday >= e.cushion ? '#e8f6ec' : '#fff4dc' }}>
-              {result.afterPayday >= e.cushion ? `ხელფასის შემდეგ იგივე ${gel(result.amount)} ზღვარს ზემოთ გტოვებს (~${fmt(r10(result.afterPayday))} ₾ მარაგით)` : `ხელფასის შემდეგაც ფული ცოტა იქნება (~${fmt(r10(result.afterPayday))} ₾)`}
+              ხელფასის მერე რომ იყიდო: ~{fmt(r10(result.afterPayday))} ₾ დაგრჩება{result.afterPayday >= e.cushion ? ' ✓' : ' — ზღვარს ქვემოთ'}
             </div>
-            <div className="row" style={{ marginTop: 12, alignItems: 'flex-start' }}>
-              <Jikho size={64} mood={moodFor(result.weather)} stage={stage} accessories={result.weather === 'storm' || result.weather === 'rain' ? ['umbrella'] : []} />
-              <div className="card" style={{ flex: 1, padding: 12, fontSize: 13, borderTopLeftRadius: 6 }}>{jikhoLine(result.weather)} რასაც არ უნდა აირჩიო, ხიდს ფიცარი დაემატება.</div>
+            <div className="row" style={{ marginTop: 10, alignItems: 'center' }}>
+              <Jikho size={44} mood={moodFor(result.weather)} stage={stage} accessories={result.weather === 'storm' || result.weather === 'rain' ? ['umbrella'] : []} />
+              <div className="card" style={{ flex: 1, padding: '8px 12px', fontSize: 13, borderTopLeftRadius: 6 }}>{gameOff ? jikhoLine(result.weather) : 'რასაც არ უნდა აირჩიო, ხიდს ფიცარი დაემატება 🌉'}</div>
             </div>
-            <LearnLink topic="M2" text="რას ნიშნავს ეს ციფრები?" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
               <button className="pill-btn btn-ghost" onClick={() => decide(false)}>დაველოდები</button>
               <button className="pill-btn btn-primary" onClick={() => decide(true)}>ვყიდულობ</button>
             </div>
-            <Disclaimer />
+            <LearnLink topic="M2" text="რას ნიშნავს ეს ციფრები?" />
           </motion.div>
         )}
       </AnimatePresence>
@@ -294,7 +298,7 @@ function PersonaSheet({ open, onClose }: { open: boolean; onClose: () => void })
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="h2" style={{ marginBottom: 4 }}>ვისი თვე ვნახოთ?</div>
-      <div className="small muted" style={{ marginBottom: 12 }}>გამოგონილი ადამიანები სატესტო მონაცემებით. რეალური ადამიანების მონაცემები არ გამოიყენება.</div>
+      <div className="small muted" style={{ marginBottom: 12 }}>გამოგონილი ადამიანები, სატესტო მონაცემები.</div>
       <div style={{ display: 'grid', gap: 10 }}>
         {PERSONAS.map(pp => (
           <button key={pp.id} className="card" style={{ textAlign: 'left', display: 'flex', gap: 12, alignItems: 'center', outline: cur === pp.id ? '3px solid var(--sun)' : 'none' }} onClick={() => { setPersona(pp.id); onClose() }}>
@@ -310,18 +314,20 @@ function PersonaSheet({ open, onClose }: { open: boolean; onClose: () => void })
   )
 }
 
+/** the first RED_LINES_SHOWN rules are the key ones; the rest sit behind "ყველა წესი ›" */
 export const RED_LINES = [
-  'ხარჯვა, სესხი, ტრანზაქციების რაოდენობა და აპის გახსნა არასდროს გაძლევს პროგრესს',
-  'შემთხვევითობა ფულზე არასდროს ებმება; ყიდვით არაფერი იხსნება',
-  'ჯიხო შენს ქმედებას ასახავს და არა ბალანსს; არასდროს კვდება, დანაზოგი არ ქრება',
-  '„დაველოდები" და „ვყიდულობ" თანაბარ პროგრესს იძლევა',
-  'ერთი გამჭვირვალე სერია, აღდგენით და დღესასწაულებზე ავტო-გაყინვით',
-  'შეტყობინებები მხოლოდ თანხმობით, დღეში მაქსიმუმ ორი',
-  'მხარდაჭერის რეჟიმში ყოველგვარი ზეწოლა ქრება',
-  'თამაშის გამორთვა სრულ ინსტრუმენტს ტოვებს',
-  'ბანკის ფლოუში თამაში და ჯილდო არ არსებობს',
-  'სოციალურში მხოლოდ გაუმჯობესება, არასდროს ბალანსი',
+  'ხარჯვა, სესხი ან აპის გახსნა ქულას არ გაძლევს',
+  'ფულით არაფერი იყიდება, იღბლის თამაში არ არის',
+  '„დაველოდები" და „ვყიდულობ" ერთნაირ ჯილდოს იძლევა',
+  'მხარდაჭერის რეჟიმში ზეწოლა არ არის',
+  'ჯიხო შენს ქცევას ასახავს, არა ბალანსს, და არასდროს კვდება',
+  'სერია აღდგება, დღესასწაულებზე კი თავისით იყინება',
+  'შეტყობინებები მხოლოდ შენი თანხმობით, დღეში მაქსიმუმ ორი',
+  'თამაშის გამორთვისას აპი სრულად მუშაობს',
+  'ბანკის გვერდებზე თამაში და ჯილდო არ არის',
+  'მეგობრებს მხოლოდ პროგრესს უზიარებ, თანხას — არასდროს',
 ]
+export const RED_LINES_SHOWN = 4
 
 function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const v = useToday()
@@ -366,6 +372,7 @@ function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const gameOff = useStore(s => s.gameOff)
   const setGameOff = useStore(s => s.setGameOff)
+  const [allRules, setAllRules] = useState(false)
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="h2">პარამეტრები</div>
@@ -376,8 +383,9 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
         </button>
       </div>
       <div className="card" style={{ marginTop: 10 }}>
-        <div className="h3" style={{ marginBottom: 8 }}>სამართლიანი თამაშის 10 წესი</div>
-        <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.55 }}>{RED_LINES.map(l => <li key={l}>{l}</li>)}</ol>
+        <div className="h3" style={{ marginBottom: 8 }}>სამართლიანი თამაში</div>
+        <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, lineHeight: 1.55 }}>{(allRules ? RED_LINES : RED_LINES.slice(0, RED_LINES_SHOWN)).map(l => <li key={l}>{l}</li>)}</ol>
+        <button className="small" style={{ marginTop: 6, fontWeight: 700, color: 'var(--ink-2)' }} aria-expanded={allRules} onClick={() => setAllRules(a => !a)}>{allRules ? 'ნაკლები ‹' : `ყველა წესი (${RED_LINES.length}) ›`}</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
         <button className="pill-btn btn-ghost" onClick={() => { useStore.getState().resetDemo(); onClose() }}>↺ ამ პერსონის დემო</button>
@@ -410,13 +418,13 @@ function Ceremony() {
               <Jikho size={150} mood={c.safe ? 'celebrate' : 'calm'} stage={evolutionStage(game)} accessories={game.equipped} />
             </motion.div>
             <div style={{ fontSize: 26, fontWeight: 800, marginTop: 6 }}>{c.safe ? 'ჩავედით! 🎉' : 'ჩავედით ხელფასამდე'}</div>
-            <div className="muted" style={{ marginTop: 4 }}>{p.paydayLabel} · ხელფასის დილით</div>
+            <div className="muted" style={{ marginTop: 4 }}>{p.paydayLabel}</div>
             {(c.pts ?? 0) > 0 && (
               <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.4 }} className="chip" style={{ marginTop: 8, background: '#fff3c4', color: '#7a5a00', fontWeight: 800, padding: '6px 12px' }}>⭐ +{c.pts} ქულა · თვე გეგმით გაიარე</motion.div>
             )}
             <div className="big" style={{ marginTop: 12 }}>{gel(c.landing)}</div>
             <div className="small" style={{ marginTop: 6, fontWeight: 700, color: c.safe ? 'var(--good)' : 'var(--ink-2)' }}>
-              {c.safe ? `უსაფრთხო ზღვარზე ${gel(c.landing - c.cushion)}-ით მეტი. კარგი ჩასვლაა!` : `ამჯერად უსაფრთხო ზღვარს (${gel(c.cushion)}) ქვემოთ ჩახვედი. არაფერი იკარგება.`}
+              {c.safe ? `ზღვარზე ${gel(c.landing - c.cushion)}-ით მეტი!` : `ამჯერად ზღვარს (${gel(c.cushion)}) ქვემოთ ჩახვედი. არაფერი იკარგება.`}
             </div>
           </div>
 
@@ -429,18 +437,21 @@ function Ceremony() {
                 <div>
                   <div className="h3">კოშკს ახალი ქვა დაემატა</div>
                   <div style={{ fontSize: 34, fontWeight: 800, margin: '4px 0' }}>{game.stones}<span className="muted" style={{ fontSize: 18 }}>/12</span></div>
-                  <div className="small muted">ყოველ კარგ ჩასვლაზე ერთი ქვა. ქვა არასდროს იკარგება. 12 ქვაზე კოშკს სახურავი დაედგმება.</div>
+                  <div className="small muted">12 ქვაზე კოშკი დასრულდება.</div>
+                  <div className="small" style={{ marginTop: 6, fontWeight: 700 }}>{landmark.icon} ახალი ადგილი: {landmark.name}</div>
                 </div>
               </motion.div>
             )}
-            <motion.div className="card row" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
-              <div style={{ fontSize: 34, width: 56, textAlign: 'center' }}>{landmark.icon}</div>
-              <div><div className="h3">რუკაზე ახალი ადგილი: {landmark.name}</div><div className="small muted">ერთი თვის გზა დასრულდა. ამ წელს: {game.cycles}/12</div></div>
-            </motion.div>
+            {!c.safe && (
+              <motion.div className="card row" initial={{ x: 30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.8 }}>
+                <div style={{ fontSize: 34, width: 56, textAlign: 'center' }}>{landmark.icon}</div>
+                <div className="h3">ახალი ადგილი: {landmark.name}</div>
+              </motion.div>
+            )}
             {!c.safe && (
               <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
                 <div className="h3">რა ვერ გავითვალისწინეთ</div>
-                <div className="small" style={{ marginTop: 4 }}>{v.extra > 0 ? `ამ თვეში ${gel(v.extra)}-ის შესყიდვა ჩაიწერა. პროგნოზი ამას წინასწარ ვერ ხედავდა.` : 'მოულოდნელი ხარჯი, რომელიც ისტორიაში არ ჩანდა.'} შემდეგ თვეს პროგნოზს უფრო ფრთხილად დავთვლით. სერია და სოფელი ხელუხლებელია.</div>
+                <div className="small" style={{ marginTop: 4 }}>{v.extra > 0 ? `ამ თვეში ${gel(v.extra)}-ის შესყიდვა ჩაიწერა. პროგნოზი ამას წინასწარ ვერ ხედავდა.` : 'მოულოდნელი ხარჯი, რომელიც ისტორიაში არ ჩანდა.'} შემდეგ თვეს პროგნოზს უფრო ფრთხილად დავთვლით.</div>
               </motion.div>
             )}
             <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>

@@ -4,7 +4,7 @@ import type { Game } from '../../state/store'
 import { Jikho } from '../Jikho'
 import {
   PlaceId, PLACE_HIT, TowerPlace, SchoolPlace, CellarPlace, StationPlace, BridgePlace, Stream, VILLAGE_KEYFRAMES,
-  TOWER_MAX, BRIDGE_MAX, STATION_MAX, jarPct,
+  TOWER_MAX, BRIDGE_MAX, STATION_MAX, BOOKS_PER_TOPIC, jarPct,
 } from './Places'
 
 const VW = 390
@@ -18,16 +18,14 @@ interface Props {
   onOpen: (p: PlaceId) => void
 }
 
-export const PLACE_ICON: Record<PlaceId, string> = { tower: '🗼', school: '🏫', cellar: '🏺', station: '📡', bridge: '🌉' }
-
 export function placeBadge(id: PlaceId, g: Game): string {
   switch (id) {
     case 'tower': return `კოშკი ${Math.min(TOWER_MAX, g.stones)}/${TOWER_MAX}`
-    case 'school': return `სკოლა · ${g.books} წიგნი`
+    case 'school': return `სკოლა ${g.books % BOOKS_PER_TOPIC}/${BOOKS_PER_TOPIC}`
     case 'cellar': {
       const q = g.qvevri[0]
       if (!q) return 'მარანი'
-      return q.sealedAt ? 'მარანი · დალუქული' : `მარანი ${Math.round(jarPct(q) * 100)}%`
+      return q.sealedAt ? 'მარანი ✓' : `მარანი ${Math.round(jarPct(q) * 100)}%`
     }
     case 'station': return `სადგური ${Math.min(STATION_MAX, g.station)}/${STATION_MAX}`
     case 'bridge': return `ხიდი ${Math.min(BRIDGE_MAX, g.planks)}/${BRIDGE_MAX}`
@@ -55,7 +53,7 @@ export function VillageScene({ game, stage, hardship, tips, onOpen }: Props) {
     setHop(true)
     setTipIdx(i => (i === null ? 0 : (i + 1) % Math.max(1, tips.length)))
     window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => { setHop(false); setTipIdx(null) }, 3600)
+    timer.current = window.setTimeout(() => { setHop(false); setTipIdx(null) }, 4500)
   }
 
   const skyTop = hardship ? '#a7c0d6' : '#86cdfb'
@@ -186,7 +184,6 @@ export function VillageScene({ game, stage, hardship, tips, onOpen }: Props) {
             zIndex: 2,
           }}
         >
-          <span aria-hidden>{PLACE_ICON[p.id]}</span>
           {placeBadge(p.id, game)}
         </motion.button>
       ))}

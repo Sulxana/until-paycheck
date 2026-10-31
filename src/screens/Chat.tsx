@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, ChatMsg } from '../state/store'
 import { useEngine, usePersona, gel, fmt } from '../engine/view'
 import { Jikho, JikhoMood } from '../components/Jikho'
 import { RangeBar, WEMOJI } from '../components/ui'
-import { FanChart, MonthStrip } from '../components/FanChart'
+import { FanChart } from '../components/FanChart'
 import { respond, greeting, Ctx, START_CHIPS } from '../chat/responder'
 import { LearnLink } from '../components/learn/LearnLink'
-import { WEATHER_LABEL } from '../engine/engine'
+import { WEATHER_LABEL, WeatherKind, weatherOf } from '../engine/engine'
 
 const ctxByPersona: Record<string, Ctx> = {}
 
@@ -58,7 +58,6 @@ export function Chat() {
           <div className="h3">ჯიხო</div>
           <div className="tiny muted">{typing ? 'ვითვლი…' : 'შენი ფინანსური თანამგზავრი'}</div>
         </div>
-        <span className="tag" style={{ background: '#e3f4e8', color: '#2f7a4c' }}>● ოფლაინ</span>
       </div>
 
       <div ref={listRef} className="screen" style={{ padding: '12px 12px 6px' }}>
@@ -80,8 +79,9 @@ export function Chat() {
             <motion.button key={c} whileTap={{ scale: 0.94 }} className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)', flexShrink: 0, color: 'var(--navy)' }} onClick={() => send(c)}>{c}</motion.button>
           ))}
         </div>
+        <div className="tiny muted" style={{ textAlign: 'center', marginBottom: 6 }}>ℹ️ ინფორმაციაა, არა რჩევა — არჩევანი შენია.</div>
         <form className="row" onSubmit={ev => { ev.preventDefault(); send(text) }} style={{ background: '#fff', borderRadius: 18, padding: '6px 6px 6px 14px', boxShadow: 'var(--shadow-sm)' }}>
-          <input value={text} onChange={ev => setText(ev.target.value)} placeholder="მკითხე, მაგ.: 300 ლარის ფეხსაცმელი ვიყიდო?" style={{ flex: 1, border: 0, outline: 'none', fontSize: 15, background: 'transparent', minWidth: 0 }} />
+          <input value={text} onChange={ev => setText(ev.target.value)} placeholder="მაგ.: 300 ₾-ის ფეხსაცმელი ვიყიდო?" style={{ flex: 1, border: 0, outline: 'none', fontSize: 15, background: 'transparent', minWidth: 0 }} />
           <motion.button whileTap={{ scale: 0.9 }} type="submit" style={{ width: 40, height: 40, borderRadius: 14, background: text.trim() ? '#1f3b57' : '#d9d0c2', color: '#fff', fontSize: 18 }} aria-label="გაგზავნა">↑</motion.button>
         </form>
       </div>
@@ -113,63 +113,72 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
           <span className="small" style={{ fontWeight: 800 }}>{d.item ? `${d.item} · ` : ''}{gel(d.amount)}</span>
           <span style={{ fontSize: 22 }}>{WEMOJI[d.base.weather as keyof typeof WEMOJI]} → {WEMOJI[d.r.weather as keyof typeof WEMOJI]}</span>
         </div>
-        <div className="tiny muted" style={{ marginTop: 2 }}>{WEATHER_LABEL[d.base.weather as keyof typeof WEATHER_LABEL]} → {WEATHER_LABEL[d.r.weather as keyof typeof WEATHER_LABEL]} · 10 თვიდან {d.r.inTen}-ში ზღვარს ქვემოთ</div>
+        <div className="tiny muted" style={{ marginTop: 2 }}>{WEATHER_LABEL[d.base.weather as keyof typeof WEATHER_LABEL]} → {WEATHER_LABEL[d.r.weather as keyof typeof WEATHER_LABEL]} · 10-დან {d.r.inTen} თვე ზღვარს ქვემოთ</div>
         <RangeBar p10={d.r.p10} p50={d.r.p50} p90={d.r.p90} cushion={d.cushion} compare={d.base} />
-        <div className="tiny muted">ხელფასის შემდეგ რომ იყიდო, დაგრჩება ~{fmt(Math.round(d.afterPayday / 10) * 10)} ₾.</div>
-        <LearnLink topic="M2" text={'რას ნიშნავს „ზღვარს ქვემოთ"?'} />
-        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ეს ინფორმაციაა და არა რჩევა. დათვლილია შენი ხარჯების ისტორიიდან.</div>
+        <LearnLink topic="M2" text={'რას ნიშნავს „ზღვარს ქვემოთ"?'} compact />
       </div>
     )
   }
   if (card.kind === 'installment') {
+    const cmp = d.compare
     return (
       <div className="card" style={{ padding: 14 }}>
-        <div className="small" style={{ fontWeight: 800, marginBottom: 8 }}>{d.title}</div>
-        {d.compare && (
+        <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>{d.title}</div>
+        <div className="row tiny muted" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span>ხელფასამდე ამინდი:</span>
+          {(['sun', 'cloud', 'rain', 'storm'] as const).map(w => (
+            <span key={w} className="row" style={{ gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: STRIP_COLOR[w] }} />{WEATHER_LABEL[w]}</span>
+          ))}
+        </div>
+        {cmp && (
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div style={{ background: '#fdecea', borderRadius: 14, padding: '10px 12px' }}>
-                <div className="tiny" style={{ fontWeight: 800, color: '#b4413b' }}>ახლა</div>
-                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>⛈️ {d.compare.nowShort}</div>
+              <div style={{ background: cmp.nowShort ? '#fdecea' : '#e6f6ea', borderRadius: 14, padding: '10px 12px' }}>
+                <div className="tiny" style={{ fontWeight: 800, color: cmp.nowShort ? '#b4413b' : 'var(--good)' }}>ახლა</div>
+                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{WEMOJI[(cmp.nowWeather ?? (cmp.nowShort ? 'storm' : 'sun')) as WeatherKind]} {cmp.nowShort}</div>
                 <div className="tiny muted">თვე ზღვარს ქვემოთ</div>
               </div>
-              <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, type: 'spring', damping: 11 }} style={{ background: '#e6f6ea', borderRadius: 14, padding: '10px 12px' }}>
-                <div className="tiny" style={{ fontWeight: 800, color: 'var(--good)' }}>{d.rows[0]?.label?.includes('აპრილ') ? 'აპრილიდან' : 'მოგვიანებით'}</div>
-                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{d.compare.short === 0 ? '☀️ 0' : `🌥️ ${d.compare.short}`}</div>
+              <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, type: 'spring', damping: 11 }} style={{ background: cmp.short ? '#fff4d6' : '#e6f6ea', borderRadius: 14, padding: '10px 12px' }}>
+                <div className="tiny" style={{ fontWeight: 800, color: cmp.short ? '#a07800' : 'var(--good)' }}>{cmp.from ?? 'მოგვიანებით'}</div>
+                <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>{WEMOJI[(cmp.weather ?? (cmp.short ? 'cloud' : 'sun')) as WeatherKind]} {cmp.short}</div>
                 <div className="tiny muted">თვე ზღვარს ქვემოთ</div>
               </motion.div>
             </div>
-            {d.compare.cost24 > d.compare.cost && (
-              <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }} className="between" style={{ marginTop: 8, background: '#1f3b57', color: '#fff', borderRadius: 14, padding: '10px 12px' }}>
-                <span className="small">პროცენტი {gel(d.compare.cost)}, არა {gel(d.compare.cost24)}</span>
-                <b style={{ color: '#ffd977', fontSize: 20, whiteSpace: 'nowrap' }}>−{gel(d.compare.cost24 - d.compare.cost)}</b>
+            {cmp.cost24 > cmp.cost && (
+              <motion.div initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.7 }} className="between" style={{ marginTop: 8, background: '#1f3b57', color: '#fff', borderRadius: 14, padding: '10px 12px', gap: 8 }}>
+                <span className="small">სესხის ფასი {gel(cmp.cost)}, ნაცვლად {gel(cmp.cost24)}-ისა</span>
+                <span style={{ textAlign: 'right', lineHeight: 1.1 }}><span className="tiny" style={{ display: 'block', opacity: 0.8 }}>ზოგავ</span><b style={{ color: '#ffd977', fontSize: 20, whiteSpace: 'nowrap' }}>{gel(cmp.cost24 - cmp.cost)}</b></span>
               </motion.div>
             )}
           </div>
         )}
         <div style={{ display: 'grid', gap: 10 }}>
-          {d.rows.map((r: any) => (
+          {d.rows.map((r: any, i: number) => (
             <div key={r.label} style={{ border: '1px solid #eee5d8', borderRadius: 14, padding: 10 }}>
               <div className="between">
                 <span className="small" style={{ fontWeight: 800 }}>{r.label}</span>
-                <span style={{ fontWeight: 800, fontSize: 18 }}>{fmt(r.monthly, r.monthly % 1 ? 1 : 0)} ₾<span className="tiny muted">/თვე</span></span>
+                <span style={{ fontWeight: 800, fontSize: 18 }}>{fmt(Math.round(r.monthly))} ₾<span className="tiny muted">/თვე</span></span>
               </div>
-              <div className="row tiny muted" style={{ gap: 10, margin: '4px 0 8px', flexWrap: 'wrap' }}>
-                <span>სულ <b style={{ color: 'var(--ink)' }}>{gel(r.total)}</b></span>
-                <span>კრედიტის ფასი <b style={{ color: r.cost ? '#b4413b' : 'var(--good)' }}>{gel(r.cost)}</b></span>
-                {r.eir > 0 && <span>ეფექტური {fmt(r.eir, 1)}%</span>}
-                <span>სესხებზე შემოსავლის ~{fmt(Math.round(r.pti))}% (PTI)</span>
-              </div>
-              <MonthStrip rows={r.window.slice(0, 12)} cushion={d.cushion} compact />
-              <div className="tiny" style={{ marginTop: 6, fontWeight: 700, color: r.nShort ? '#b4413b' : 'var(--good)' }}>
-                {r.nShort ? `${r.nShort} თვეში ხელფასამდე ზღვარს ქვემოთ ჩახვალ` : 'ყოველ თვეს ზღვარს ზემოთ რჩები'}
-              </div>
+              {!cmp && (
+                <>
+                  <div className="small" style={{ fontWeight: 800, marginTop: 2, color: r.nShort ? '#b4413b' : 'var(--good)' }}>
+                    {r.nShort ? `⚠ ${r.window.length}-დან ${r.nShort} თვე ზღვარს ქვემოთ` : '✓ ყველა თვე ზღვარს ზემოთ'}
+                  </div>
+                  <div className="tiny muted" style={{ margin: '2px 0 8px' }}>
+                    სულ <b style={{ color: 'var(--ink)' }}>{gel(r.total)}</b> · სესხის ფასი <b style={{ color: r.cost ? '#b4413b' : 'var(--good)' }}>{gel(r.cost)}</b>
+                  </div>
+                </>
+              )}
+              <Strip rows={r.window.slice(0, 12)} cushion={d.cushion} labels={i === d.rows.length - 1} />
             </div>
           ))}
         </div>
-        <div className="tiny muted" style={{ marginTop: 8 }}>ფერი = ხელფასამდე ამინდი ყოველ თვეს: <b style={{ color: '#3f9a4c' }}>მწვანე</b> — კარგად, <b style={{ color: '#c99a00' }}>ყვითელი</b> — მჭიდროდ, <b style={{ color: '#d9534f' }}>წითელი</b> — ფული არ ჰყოფნის. {d.note ?? ''}</div>
-        <LearnLink topic="M3" text="რატომ ჯდება ვადები სხვადასხვა ფასი?" />
-        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ეს ინფორმაციაა და არა რჩევა. ვადები ხანგრძლივობით არის დალაგებული. შორეული თვეები ვარაუდია.</div>
+        {d.note && <div className="tiny muted" style={{ marginTop: 8 }}>{d.note}</div>}
+        <Info>
+          {d.rows.filter((r: any) => r.eir > 0).map((r: any) => <div key={r.label}>{r.label}: ეფექტური წლიური {fmt(r.eir, 1)}%</div>)}
+          <div>შორეული თვეები მიახლოებითია.</div>
+        </Info>
+        <LearnLink topic="M3" text="რატომ ძვირდება გრძელი ვადა?" compact />
       </div>
     )
   }
@@ -184,8 +193,8 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
   if (card.kind === 'safe') {
     return (
       <div className="card" style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div><div className="tiny muted" style={{ fontWeight: 700 }}>დღეს დამატებით შეგიძლია</div><div style={{ fontSize: 26, fontWeight: 800 }}>~{gel(d.safe)}</div><div className="tiny muted">ჩვეულებრივი ხარჯის გარდა</div></div>
-        <div><div className="tiny muted" style={{ fontWeight: 700 }}>ერთი შესყიდვა</div><div style={{ fontSize: 26, fontWeight: 800 }}>≤{gel(d.max)}</div><div className="tiny muted">ამ თანხამდე ამინდი არ გაუარესდება</div></div>
+        <div><div className="tiny muted" style={{ fontWeight: 700 }}>დღის თავისუფალი თანხა</div><div style={{ fontSize: 26, fontWeight: 800 }}>~{gel(d.safe)}</div><div className="tiny muted">ჩვეულებრივი ხარჯის გარდა</div></div>
+        <div><div className="tiny muted" style={{ fontWeight: 700 }}>ერთი შესყიდვა</div><div style={{ fontSize: 26, fontWeight: 800 }}>≤{gel(d.max)}</div><div className="tiny muted">ამინდი ღრუბლიანზე უარესი არ გახდება</div></div>
       </div>
     )
   }
@@ -199,4 +208,32 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
     )
   }
   return null
+}
+
+/** strip colours follow the weather scale (same as MonthStrip) */
+const STRIP_COLOR: Record<WeatherKind, string> = { sun: '#58b368', cloud: '#f0c419', rain: '#f08a3c', storm: '#d9534f' }
+
+/** month strip for chat cards: month names only under the last row, so they are not repeated */
+function Strip({ rows, cushion, labels }: { rows: { label: string; p50: number; pBelow: number }[]; cushion: number; labels: boolean }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${rows.length}, 1fr)`, gap: 3 }}>
+      {rows.map((r, i) => (
+        <motion.div key={r.label} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: i * 0.03 }} title={`${r.label}: ~${Math.round(r.p50)} ₾`} style={{ textAlign: 'center' }}>
+          <div style={{ height: 14, borderRadius: 5, background: STRIP_COLOR[weatherOf(r.pBelow)], opacity: r.p50 < cushion ? 1 : 0.85, boxShadow: r.p50 < cushion ? 'inset 0 0 0 2px rgba(0,0,0,0.15)' : undefined }} />
+          {labels && <div style={{ fontSize: 9.5, color: '#8193a5', marginTop: 2 }}>{r.label.split(' ')[1]}</div>}
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+/** small ⓘ toggle: the extra detail opens inline */
+function Info({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ marginTop: 6 }}>
+      <button onClick={() => setOpen(o => !o)} className="tiny muted" style={{ background: 'none', padding: 0, fontWeight: 700 }} aria-expanded={open}>ⓘ {open ? 'დამალვა' : 'დეტალები'}</button>
+      {open && <div className="tiny muted" style={{ marginTop: 4, display: 'grid', gap: 2 }}>{children}</div>}
+    </div>
+  )
 }

@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage } from '../../state/store'
 import { useToday, fmt, gel } from '../../engine/view'
 import { Jikho, JikhoMood } from '../Jikho'
-import { eveningRecall, ActionKind, LessonCtx } from '../../content/lessons'
-import { JikhoSays, Steps, QuizCard } from './parts'
+import { eveningRecall, LessonCtx } from '../../content/lessons'
+import { JikhoSays, Steps, QuizCard, OnLessonAction } from './parts'
 import { useDayLocal } from './local'
 
 /** დეტერმინისტული „დღევანდელი ხარჯი": მედიანური დღე × დღის კოეფიციენტი */
@@ -20,7 +20,7 @@ const CASH_TAGS = [
   { id: 'none', label: '💳 ნაღდი არ დამიხარჯავს' },
 ]
 
-export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean) => void; onAction: (k: ActionKind) => void; localKey: string }) {
+export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean) => void; onAction: OnLessonAction; localKey: string }) {
   const v = useToday()
   const { e, p } = v
   const game = useStore(s => s.games[p.id])
@@ -51,7 +51,7 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
   const mood: JikhoMood = step === 1 ? (recallOk === null ? 'thinking' : recallOk ? 'celebrate' : 'calm') : 'talking'
   const line =
     step === 0 ? 'ჩაწერე ერთი ნაღდი ხარჯი — პროგნოზი უფრო ზუსტი გახდება.'
-      : step === 1 ? (recallOk === null ? (game.morningDone ? 'დილით ეს ვისწავლეთ. გახსოვს?' : 'ერთი გამეორება ადრე ნასწავლიდან.') : recallOk ? 'გახსოვს! ასე რჩება ცოდნა. 🎉' : 'არაუშავს — ხვალ ისევ შეგახსენებ.')
+      : step === 1 ? (recallOk === null ? (game.morningDone ? 'დილით ეს ვისწავლეთ. გახსოვს?' : 'ერთი გამეორება ადრე ნასწავლიდან.') : recallOk ? 'ყოჩაღ! 🎉' : 'ხვალ ისევ შეგახსენებ.')
         : 'ბოლო კითხვა: ახალი განმეორებადი ხარჯი შევნიშნე.'
 
   const tag = (id: string) => {

@@ -4,18 +4,16 @@ import { useStore, evolutionStage, COSMETIC_POOL } from '../../state/store'
 import { useToday, fmt } from '../../engine/view'
 import { Jikho, JikhoMood } from '../Jikho'
 import { WeatherChip, WCOLOR } from '../ui'
-import { morningSet, ActionKind, TOPICS, LessonCtx } from '../../content/lessons'
-import { JikhoSays, Steps, QuizCard, Confetti } from './parts'
+import { morningSet, TOPICS, LessonCtx } from '../../content/lessons'
+import { JikhoSays, Steps, QuizCard, Confetti, OnLessonAction } from './parts'
 import { useDayLocal } from './local'
 import { MicroLesson } from '../learn/MicroLesson'
 
 const r10 = (v: number) => Math.round(v / 10) * 10
 
 const ASK_LINES = ['მოდი, ვნახოთ…', 'ეს საინტერესოა — შენ რას ფიქრობ?', 'ბოლო კითხვა — შენი რიცხვებით!']
-const OK_LINES = ['ზუსტად!', 'ყოჩაღ! ეს ცოდნა ფულს ზოგავს.', 'ბრავო — შენი რიცხვები შენზე კარგად არავინ იცის!']
-const SOFT_LINES = ['არაუშავს — ახლა უკვე იცი.', 'კარგი მცდელობა! წესი ქვემოთაა.', 'ესეც სწავლაა — მთავარი ის არის, რომ დაითვალე.']
 
-export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (f: boolean) => void; onAction: (k: ActionKind) => void; goEvening: () => void; localKey: string }) {
+export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (f: boolean) => void; onAction: OnLessonAction; goEvening: () => void; localKey: string }) {
   const v = useToday()
   const { e, p } = v
   const game = useStore(s => s.games[p.id])
@@ -41,7 +39,8 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
   const [results, setResults] = useState<(boolean | null)[]>([null, null, null])
   const current = results[idx]
   const mood: JikhoMood = current === null ? 'talking' : current ? 'celebrate' : 'calm'
-  const line = current === null ? ASK_LINES[idx] : current ? OK_LINES[idx] : SOFT_LINES[idx]
+  // after answering, the card below gives the verdict: Jikho only reacts, without repeating it
+  const line = current === null ? ASK_LINES[idx] : current ? 'ყოჩაღ! 🎉' : 'არაუშავს 💡'
 
   const start = () => { setPhase('quiz'); setIdx(0); setResults([null, null, null]); setTaught(null); onFocus(true) }
   const learn = useStore(s => s.learn)
@@ -154,7 +153,7 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
         <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
           {!gameOff && <motion.span initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="chip" style={{ background: '#fff' }}>📗 +1 წიგნი · სულ {game.books}</motion.span>}
           {!gameOff && (v.hardship ? (
-            <motion.span initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.45 }} className="chip" style={{ background: '#e8f2fc', color: '#2c6aa0' }}>❄ სერია გაყინულია — არაფერი იკარგება</motion.span>
+            <motion.span initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.45 }} className="chip" style={{ background: '#e8f2fc', color: '#2c6aa0' }}>❄ სერია შენახულია</motion.span>
           ) : (
             <motion.span initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.45 }} className="chip" style={{ background: '#fff' }}>🏮 სერია {game.streak} დღე</motion.span>
           ))}

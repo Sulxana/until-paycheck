@@ -24,6 +24,8 @@ interface Props {
   bubble?: string | null
   onJikhoTap?: () => void
   hop?: number
+  /** support mode: storm without lightning or flashes */
+  calm?: boolean
 }
 
 /** tile positions along a winding mountain road, left (today) to right (payday camp) */
@@ -37,7 +39,7 @@ function tilePoints(n: number) {
 }
 const pct = (p: { x: number; y: number }) => ({ left: `${(p.x / 390) * 100}%`, top: `${(p.y / 290) * 100}%` })
 
-export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stage, accessories, height = 290, walking, bubble, onJikhoTap, hop = 0 }: Props) {
+export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stage, accessories, height = 290, walking, bubble, onJikhoTap, hop = 0, calm }: Props) {
   const pts = tilePoints(nDays)
   const here = pts[Math.min(day, nDays)]
   // walk along the curve from the previous tile to the new one
@@ -175,7 +177,7 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
             })}
           </g>
         )}
-        {weather === 'storm' && (
+        {weather === 'storm' && !calm && (
           <>
             <path d="M210 40 L196 82 L210 80 L198 120 L226 70 L212 72 L222 40 Z" fill="#ffe27a" style={{ animation: 'flash 3.2s infinite' }} />
             <rect width="390" height="290" fill="#fff" style={{ animation: 'flash 3.2s infinite', mixBlendMode: 'overlay' }} opacity="0" />

@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
@@ -31,7 +31,7 @@ export function Analytics() {
         {seg === 'spend' && <Spend />}
         {seg === 'points' && <Points />}
       </motion.div>
-      <Disclaimer />
+      {seg === 'points' ? <Disclaimer /> : <Disclaimer>ინფორმაციაა, არა რჩევა. პროგნოზი შენი ხარჯების ისტორიიდან ითვლება.</Disclaimer>}
       <div style={{ height: 12 }} />
     </div>
   )
@@ -55,7 +55,8 @@ function Payday() {
   const reward = useStore(s => s.reward)
   const confirmed = useStore(s => s.games[p.id].confirmed)
   const fan = useMemo(() => e.fan(), [e])
-  const bills = p.due.map(d => ({ idx: d.dayIndex, name: d.name, amount: d.amount ?? Math.round((d.range![0] + d.range![1]) / 2) }))
+  const due = [...p.due].sort((a, b) => a.dayIndex - b.dayIndex)
+  const bills = due.map(d => ({ idx: d.dayIndex, name: d.name, amount: d.amount ?? Math.round((d.range![0] + d.range![1]) / 2) }))
   const fixedShare = Math.round((e.fixedTotal / p.salary) * 100)
   const varShare = Math.round((e.monthlyVarMedian / p.salary) * 100)
   const left = Math.max(0, 100 - fixedShare - varShare)
@@ -100,11 +101,11 @@ function Payday() {
         </div>
       </Insight>
 
-      <Year compact />
+      <Year />
 
       <Insight kicker="გადასახადები" title="ხელფასამდე ეს გადასახადები გელის" legend="ყოველი დადასტურება პროგნოზს აზუსტებს.">
         <div style={{ display: 'grid', gap: 8 }}>
-          {p.due.map(d => {
+          {due.map(d => {
             const amt = d.amount ?? Math.round((d.range![0] + d.range![1]) / 2)
             const done = d.dayIndex < v.day
             return (
@@ -162,14 +163,10 @@ function YearBars({ rows, start }: { rows: CycleRow[]; start: number }) {
   )
 }
 
-function Year({ compact }: { compact?: boolean }) {
+function Year() {
   const v = useToday()
   const { e } = v
-  const [pledge, setPledge] = useState(false)
-  const [delivery, setDelivery] = useState(false)
-  const deliveryCut = Math.round(e.monthlyVarMedian * 0.034)
-  const delta = (pledge ? 100 : 0) - (delivery ? deliveryCut : 0)
-  const rows = useMemo(() => (delta === 0 ? e.baseline : e.installment({ price: 0, months: 1, ratePerMonth: 0, pledge: delta }).rows.slice(0, 12)), [e, delta])
+  const rows = e.baseline
   const nets = rows.map((r, i) => r.p50 - (i ? rows[i - 1].p50 : e.landing.p50))
   const worstI = nets.reduce((bi, n, i) => (n < nets[bi] ? i : bi), 0)
   const worst = Math.round(nets[worstI])
@@ -177,33 +174,13 @@ function Year({ compact }: { compact?: boolean }) {
   const worstMonth = KA_MONTHS_FULL[rows[worstI].m] // same month as the bar label
   const stem = worstMonth.endsWith('ი') ? worstMonth.slice(0, -1) : worstMonth
   return (
-    <>
-      <Insight
-        kicker="წინ რთული თვეები"
-        title={worst < 0 ? <>ყველაზე რთული თვე <span style={{ color: '#b4413b' }}>{worstMonth}ა: {fmt(worst)} ₾</span></> : <>ყოველ თვეს რაღაც რჩება. ყველაზე ცოტა — {stem}ში</>}
-        legend={<>სვეტი აჩვენებს, რამდენი რჩება ერთი ხელფასიდან მეორემდე. მწვანე — კარგად რჩება, ყვითელი — ცოტა, წითელი — თვე მინუსშია. {short.length ? `ზღვარს ქვემოთ ჩადიხარ: ${short.map(s => s.label.split(' ')[1]).join(', ')}.` : ''} ეს ვარაუდია: ბოლო თვეების ხარჯს და შარშანდელ ზამთარს ვიმეორებთ.</>}
-      >
-        <YearBars rows={rows} start={e.landing.p50} />
-      </Insight>
-      {!compact && <Insight kicker="რა მოხდება, თუ…" title="სცადე და ნახე, როგორ შეიცვლება წელი">
-        <div style={{ display: 'grid', gap: 8 }}>
-          <Toggle on={pledge} set={setPledge} title="ყოველ ხელფასზე 100 ₾ გადავდებ" sub="დანაზოგში, ხელფასის დღესვე" />
-          <Toggle on={delivery} set={setDelivery} title="მიწოდებასა და კაფეზე 20%-ით ნაკლებს დავხარჯავ" sub={`თვეში დაახლოებით ${gel(deliveryCut)}`} />
-        </div>
-        {pledge && short.length > 0 && <div className="small" style={{ marginTop: 10, background: '#fff4dc', borderRadius: 12, padding: '10px 12px' }}>ზამთარში, 100 ₾-ის გადადებით, ზღვარს ქვემოთ ჩადიხარ. ბევრი ადამიანი დეკემბრიდან მარტამდე გადადებას ამცირებს.</div>}
-      </Insight>}
-    </>
-  )
-}
-
-function Toggle({ on, set, title, sub }: { on: boolean; set: (v: boolean) => void; title: string; sub: string }) {
-  return (
-    <button onClick={() => set(!on)} className="between" style={{ textAlign: 'left', padding: '12px', borderRadius: 14, background: on ? '#eaf4fd' : '#fbf8f2' }}>
-      <div><div className="small" style={{ fontWeight: 800 }}>{title}</div><div className="tiny muted">{sub}</div></div>
-      <span style={{ width: 46, height: 26, borderRadius: 13, background: on ? '#1f3b57' : '#d9d0c2', position: 'relative', flexShrink: 0 }}>
-        <motion.span animate={{ x: on ? 20 : 0 }} style={{ position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 10, background: '#fff' }} />
-      </span>
-    </button>
+    <Insight
+      kicker="წინ რთული თვეები"
+      title={worst < 0 ? <>ყველაზე რთული თვე <span style={{ color: '#b4413b' }}>{worstMonth}ა: {fmt(worst)} ₾</span></> : <>ყოველ თვეს რაღაც რჩება. ყველაზე ცოტა — {stem}ში</>}
+      legend={<>სვეტი აჩვენებს, რამდენი რჩება ერთი ხელფასიდან მეორემდე. მწვანე — კარგად რჩება, ყვითელი — ცოტა, წითელი — თვე მინუსშია.{short.length ? ` ზღვარს ქვემოთ ჩადიხარ: ${short.map(s => s.label.split(' ')[1]).join(', ')}.` : ''}</>}
+    >
+      <YearBars rows={rows} start={e.landing.p50} />
+    </Insight>
   )
 }
 
