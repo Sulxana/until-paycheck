@@ -55,7 +55,7 @@ export function Chat() {
         </div>
         <div style={{ flex: 1 }}>
           <div className="h3">ჯიხო</div>
-          <div className="tiny muted">{typing ? 'ითვლის 1 000 სცენარს…' : 'შენი ფინანსური თანამგზავრი · ინფორმაცია, არა რჩევა'}</div>
+          <div className="tiny muted">{typing ? 'ვითვლი…' : 'შენი ფინანსური თანამგზავრი'}</div>
         </div>
         <span className="tag" style={{ background: '#e3f4e8', color: '#2f7a4c' }}>● ოფლაინ</span>
       </div>
@@ -80,7 +80,7 @@ export function Chat() {
           ))}
         </div>
         <form className="row" onSubmit={ev => { ev.preventDefault(); send(text) }} style={{ background: '#fff', borderRadius: 18, padding: '6px 6px 6px 14px', boxShadow: 'var(--shadow-sm)' }}>
-          <input value={text} onChange={ev => setText(ev.target.value)} placeholder="მაგ.: 300 ლარის ფეხსაცმელი ვიყიდო?" style={{ flex: 1, border: 0, outline: 'none', fontSize: 15, background: 'transparent', minWidth: 0 }} />
+          <input value={text} onChange={ev => setText(ev.target.value)} placeholder="მკითხე, მაგ.: 300 ლარის ფეხსაცმელი ვიყიდო?" style={{ flex: 1, border: 0, outline: 'none', fontSize: 15, background: 'transparent', minWidth: 0 }} />
           <motion.button whileTap={{ scale: 0.9 }} type="submit" style={{ width: 40, height: 40, borderRadius: 14, background: text.trim() ? '#1f3b57' : '#d9d0c2', color: '#fff', fontSize: 18 }} aria-label="გაგზავნა">↑</motion.button>
         </form>
       </div>
@@ -112,10 +112,10 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
           <span className="small" style={{ fontWeight: 800 }}>{d.item ? `${d.item} · ` : ''}{gel(d.amount)}</span>
           <span style={{ fontSize: 22 }}>{WEMOJI[d.base.weather as keyof typeof WEMOJI]} → {WEMOJI[d.r.weather as keyof typeof WEMOJI]}</span>
         </div>
-        <div className="tiny muted" style={{ marginTop: 2 }}>{WEATHER_LABEL[d.base.weather as keyof typeof WEATHER_LABEL]} → {WEATHER_LABEL[d.r.weather as keyof typeof WEATHER_LABEL]} · 10-დან {d.r.inTen} ზღვარს ქვემოთ</div>
+        <div className="tiny muted" style={{ marginTop: 2 }}>{WEATHER_LABEL[d.base.weather as keyof typeof WEATHER_LABEL]} → {WEATHER_LABEL[d.r.weather as keyof typeof WEATHER_LABEL]} · 10 თვიდან {d.r.inTen}-ში ზღვარს ქვემოთ</div>
         <RangeBar p10={d.r.p10} p50={d.r.p50} p90={d.r.p90} cushion={d.cushion} compare={d.base} />
-        <div className="tiny muted">წყვეტილი — შესყიდვის გარეშე · ხელფასის შემდეგ: ~{fmt(Math.round(d.afterPayday / 10) * 10)} ₾</div>
-        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ინფორმაციაა, არა რჩევა. 1 000 სცენარი შენი ისტორიიდან.</div>
+        <div className="tiny muted">წყვეტილი ზოლი — თუ არ იყიდი. ხელფასის შემდეგ რომ იყიდო, დაგრჩება ~{fmt(Math.round(d.afterPayday / 10) * 10)} ₾.</div>
+        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ეს ინფორმაციაა და არა რჩევა. დათვლილია შენი ხარჯების ისტორიიდან.</div>
       </div>
     )
   }
@@ -156,17 +156,17 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
                 <span>სულ <b style={{ color: 'var(--ink)' }}>{gel(r.total)}</b></span>
                 <span>კრედიტის ფასი <b style={{ color: r.cost ? '#b4413b' : 'var(--good)' }}>{gel(r.cost)}</b></span>
                 {r.eir > 0 && <span>ეფექტური {fmt(r.eir, 1)}%</span>}
-                <span>PTI ~{fmt(r.pti, 1)}%</span>
+                <span>სესხებზე შემოსავლის ~{fmt(Math.round(r.pti))}% (PTI)</span>
               </div>
               <MonthStrip rows={r.window.slice(0, 12)} cushion={d.cushion} compact />
               <div className="tiny" style={{ marginTop: 6, fontWeight: 700, color: r.nShort ? '#b4413b' : 'var(--good)' }}>
-                {r.nShort ? `${r.nShort} თვე ზღვარს ქვემოთ (მედიანით)` : 'ყველა თვე ზღვარს ზემოთ'}
+                {r.nShort ? `${r.nShort} თვეში ხელფასამდე ზღვარს ქვემოთ ჩახვალ` : 'ყოველ თვეს ზღვარს ზემოთ რჩები'}
               </div>
             </div>
           ))}
         </div>
-        <div className="tiny muted" style={{ marginTop: 8 }}>🟩 მზიანი · 🟨 ღრუბლიანი · 🟧 წვიმიანი · 🟥 ქარიშხალი — ხელფასამდე ყოველ თვეს. {d.note ?? ''}</div>
-        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ინფორმაციაა, არა რჩევა. ვადები ვადის მიხედვითაა, არცერთი არ არის მონიშნული. ერთ ხელფასზე შორს — ექსტრაპოლაცია.</div>
+        <div className="tiny muted" style={{ marginTop: 8 }}>ფერი = ხელფასამდე ამინდი ყოველ თვეს: <b style={{ color: '#3f9a4c' }}>მწვანე</b> — კარგად, <b style={{ color: '#c99a00' }}>ყვითელი</b> — მჭიდროდ, <b style={{ color: '#d9534f' }}>წითელი</b> — ფული არ ჰყოფნის. {d.note ?? ''}</div>
+        <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ეს ინფორმაციაა და არა რჩევა. ვადები ხანგრძლივობით არის დალაგებული. შორეული თვეები ვარაუდია.</div>
       </div>
     )
   }
@@ -174,22 +174,22 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
     return (
       <div className="card" style={{ padding: 12 }}>
         <FanChart data={d.fan} cushion={d.cushion} height={150} />
-        <div className="tiny muted">ზოლი — 10 მსგავსი თვიდან 8 · ხაზი — ყველაზე სავარაუდო</div>
+        <div className="tiny muted">ცისფერი ზოლი — სად შეიძლება აღმოჩნდე. მუქი ხაზი — ყველაზე სავარაუდო.</div>
       </div>
     )
   }
   if (card.kind === 'safe') {
     return (
       <div className="card" style={{ padding: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <div><div className="tiny muted" style={{ fontWeight: 700 }}>დღეს თავისუფლად</div><div style={{ fontSize: 26, fontWeight: 800 }}>~{gel(d.safe)}</div><div className="tiny muted">ჩვეულ ხარჯს ზემოთ</div></div>
-        <div><div className="tiny muted" style={{ fontWeight: 700 }}>ერთჯერადი შესყიდვა</div><div style={{ fontSize: 26, fontWeight: 800 }}>≤{gel(d.max)}</div><div className="tiny muted">ამინდი ღრუბლიანზე უარესი არ ხდება</div></div>
+        <div><div className="tiny muted" style={{ fontWeight: 700 }}>დღეს დამატებით შეგიძლია</div><div style={{ fontSize: 26, fontWeight: 800 }}>~{gel(d.safe)}</div><div className="tiny muted">ჩვეულებრივი ხარჯის გარდა</div></div>
+        <div><div className="tiny muted" style={{ fontWeight: 700 }}>ერთი შესყიდვა</div><div style={{ fontSize: 26, fontWeight: 800 }}>≤{gel(d.max)}</div><div className="tiny muted">ამ თანხამდე ამინდი არ გაუარესდება</div></div>
       </div>
     )
   }
   if (card.kind === 'concept') {
     return (
       <div className="card" style={{ padding: 14, background: 'linear-gradient(135deg,#fff,#f6f1ff)' }}>
-        <div className="h3">📘 {d.title}</div>
+        <div className="h3">{d.title}</div>
         <div className="small" style={{ marginTop: 8, background: '#fff7e0', borderRadius: 10, padding: '8px 10px' }}><b>შენთვის:</b> {d.mine}</div>
         <div className="small" style={{ marginTop: 6 }}><b>წესი:</b> {d.rule}</div>
       </div>

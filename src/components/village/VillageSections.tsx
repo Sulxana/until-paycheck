@@ -38,9 +38,9 @@ export function jikhoTips(g: Game, hardship: boolean): string[] {
   if (hardship) tips.push('ახლა დასვენების დროა. სოფელი გაყინულია — არაფერი ინგრევა.')
   tips.push(stageProgress(g).text + '.')
   const n = Math.min(TOWER_MAX, g.stones)
-  tips.push(n < TOWER_MAX ? `კოშკს ${TOWER_MAX - n} ქვა აკლია. ყოველი უსაფრთხო ხელფასი — ერთი ქვა.` : 'კოშკი დავასრულეთ! სახურავიც ადგას 🎉')
+  tips.push(n < TOWER_MAX ? `კოშკს ${TOWER_MAX - n} ქვა აკლია. ქვას იღებ, როცა ხელფასის დღეს უსაფრთხო ზღვარზე მეტი გრჩება.` : 'კოშკი დავასრულეთ! სახურავიც ადგას.')
   tips.push(`კიდევ ${BOOKS_PER_TOPIC - (g.books % BOOKS_PER_TOPIC)} დილის გაკვეთილი და სკოლაში ახალი ფანჯარა აინთება.`)
-  tips.push('შესყიდვამდე შემოწმება ხიდს ფიცარს მატებს — ყიდვაც და ლოდინიც თანაბრად ითვლება.')
+  tips.push('შესყიდვამდე შემოწმება ხიდს ფიცარს მატებს — მთავარია შემოწმება, არა ის, იყიდი თუ არა.')
   return tips
 }
 
@@ -97,7 +97,7 @@ function Meter({ label, right, value, max, color, next }: { label: string; right
         {right && <span className="muted" style={{ fontWeight: 700 }}>{right}</span>}
       </div>
       <Progress value={value} max={max} color={color} />
-      {next && <div className="small" style={{ marginTop: 9, color: 'var(--ink-2)' }}>🎯 {next}</div>}
+      {next && <div className="small" style={{ marginTop: 9, color: 'var(--ink-2)' }}>შემდეგი: {next}</div>}
     </div>
   )
 }
@@ -111,19 +111,19 @@ const TITLES: Record<PlaceId, string> = {
 }
 
 const GROWS: Record<PlaceId, string> = {
-  tower: 'ყოველი ხელფასი, რომელსაც ზღვარს ზემოთ ჩახვალ, კოშკს ერთ ქვას ამატებს. ქვა არასდროს იკარგება.',
-  school: 'ყოველი დასრულებული დილის გაკვეთილი სკოლას ერთ წიგნს მატებს. ყოველ 6 წიგნზე თემა ითვისება და ახალი ოთახი ინთება.',
-  cellar: 'ქვევრი მხოლოდ რეალური, დადასტურებული გადარიცხვით ივსება დანაზოგში. პროგრესი შემოსავლის წილით ითვლება და ზღვარი აქვს — დიდი თანხა წინ არ გაგიყვანს.',
-  station: 'სადგური იზრდება, როცა გადასახადს ადასტურებ, მაღაზიას მონიშნავ ან ნაღდ ხარჯს ჩაწერ. ასე პროგნოზის დიაპაზონი ვიწროვდება.',
-  bridge: 'ყოველი შემოწმება შესყიდვამდე ხიდს ერთ ფიცარს მატებს — სულერთია, იყიდი თუ დაელოდები. დღეში მაქსიმუმ 3 ფიცარი.',
+  tower: 'თუ ხელფასის დღეს უსაფრთხო ზღვარზე მეტი გრჩება, კოშკს ერთი ქვა ემატება. ქვა არასდროს იკარგება.',
+  school: 'ყოველი დასრულებული დილის გაკვეთილი სკოლას ერთ წიგნს მატებს. ყოველი 6 წიგნის შემდეგ თემა ათვისებულია და ახალ ოთახში შუქი ინთება.',
+  cellar: 'ქვევრი მხოლოდ მაშინ ივსება, როცა დანაზოგში რეალურად გადარიცხავ ფულს. პროგრესი შენი შემოსავლის წილით ითვლება, ამიტომ დიდი თანხა უპირატესობას არ გაძლევს.',
+  station: 'სადგური იზრდება, როცა გადასახადს ადასტურებ, მაღაზიას მონიშნავ ან ნაღდ ხარჯს ჩაწერ. ასე პროგნოზი უფრო ზუსტი ხდება.',
+  bridge: 'ყოველი შემოწმება შესყიდვამდე ხიდს ერთ ფიცარს მატებს — სულერთია, მერე იყიდი თუ არა. დღეში მაქსიმუმ 3 ფიცარი.',
 }
 
 function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
   if (id === 'tower') {
     const n = Math.min(TOWER_MAX, game.stones)
     return (
-      <Meter label={`${n}/${TOWER_MAX} ქვა`} right="უსაფრთხო ჩასვლები" value={n} max={TOWER_MAX} color="#a39478"
-        next={n < TOWER_MAX ? `კიდევ ${TOWER_MAX - n} ქვა — და კოშკს სახურავი დაედგმება.` : 'კოშკი დასრულდა — სახურავი ადგას! 🎉'} />
+      <Meter label={`${n}/${TOWER_MAX} ქვა`} right="უსაფრთხო ხელფასის დღეები" value={n} max={TOWER_MAX} color="#a39478"
+        next={n < TOWER_MAX ? `კიდევ ${TOWER_MAX - n} ქვა — და კოშკს სახურავი დაედგმება.` : 'კოშკი დასრულდა — სახურავი ადგას!'} />
     )
   }
   if (id === 'school') {
@@ -131,8 +131,8 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
     return (
       <>
         <div className="row" style={{ gap: 8, marginTop: 10 }}>
-          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>📚 {game.books} წიგნი</span>
-          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>💡 {game.topics} ათვისებული თემა</span>
+          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>{game.books} წიგნი</span>
+          <span className="chip" style={{ background: '#fff', boxShadow: 'var(--shadow-sm)' }}>{game.topics} ათვისებული თემა</span>
         </div>
         <Meter label={`${inRoom}/${BOOKS_PER_TOPIC} წიგნი`} right="შემდეგ ოთახამდე" value={inRoom} max={BOOKS_PER_TOPIC} color="#2a9d8f"
           next={`კიდევ ${BOOKS_PER_TOPIC - inRoom} დილის გაკვეთილი — და ახალი ფანჯარა აინთება.`} />
@@ -141,7 +141,7 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
   }
   if (id === 'cellar') {
     if (!game.qvevri.length) {
-      return <div className="card small" style={{ marginTop: 10, lineHeight: 1.5 }}>🏺 ჯერ ქვევრი არ გაქვს. დაისახე დანაზოგის მიზანი ჯიხოსთან — და მარანში პირველი ქვევრი გაჩნდება.</div>
+      return <div className="card small" style={{ marginTop: 10, lineHeight: 1.5 }}>ჯერ ქვევრი არ გაქვს. ჯიხოსთან ერთად დანაზოგის მიზანი დაისახე — და მარანში პირველი ქვევრი გაჩნდება.</div>
     }
     return (
       <>
@@ -149,7 +149,7 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
           const pct = Math.round(jarPct(q) * 100)
           const nextMark = [25, 50, 75, 100].find(m => m > pct) ?? 100
           return (
-            <Meter key={i} label={`🏺 ${q.name}`} right={q.sealedAt ? '🎗️ დალუქულია' : `${pct}%`} value={pct} max={100} color="#e9a23b"
+            <Meter key={i} label={q.name} right={q.sealedAt ? 'დალუქულია' : `${pct}%`} value={pct} max={100} color="#e9a23b"
               next={q.sealedAt ? `დაილუქა: ${q.sealedAt}. ახალი მიზანი — ახალი ქვევრი.` : `შემდეგი ნიშნული: ${nextMark}%. 100%-ზე ქვევრი ილუქება.`} />
           )
         })}
@@ -161,7 +161,7 @@ function PlaceBody({ id, game }: { id: PlaceId; game: Game }): ReactNode {
     const xpLeft = Math.max(1, 3 - game.stationXp)
     return (
       <>
-        <Meter label={`დონე ${lv}/${STATION_MAX}`} right={lv < STATION_MAX ? `შემდეგამდე: ${xpLeft} დადასტურება` : 'სრულად აღჭურვილი'} value={lv} max={STATION_MAX} color="var(--sky)"
+        <Meter label={`დონე ${lv}/${STATION_MAX}`} right={lv < STATION_MAX ? `შემდეგ დონემდე: ${xpLeft} დადასტურება` : 'სრულად აღჭურვილი'} value={lv} max={STATION_MAX} color="var(--sky)"
           next={lv < STATION_MAX ? `შემდეგი ხელსაწყო: ${INSTRUMENTS[lv]}.` : 'თეფში დამონტაჟდა — სადგური სრულადაა აღჭურვილი ✓'} />
         <div className="card" style={{ marginTop: 10, padding: '10px 14px' }}>
           {INSTRUMENTS.map((name, i) => (
@@ -200,7 +200,7 @@ export function PlaceSheet({ place, game, onClose }: { place: PlaceId | null; ga
           <b style={{ color: 'var(--ink)' }}>რა ზრდის: </b>{GROWS[id]}
         </div>
         <PlaceBody id={id} game={game} />
-        <div className="tiny muted" style={{ textAlign: 'center', marginTop: 12 }}>ზრდის მხოლოდ ქცევა — არა ხარჯი, სესხი ან ბალანსის ზომა.</div>
+        <div className="tiny muted" style={{ textAlign: 'center', marginTop: 12 }}>სოფელს მხოლოდ შენი ქცევა ზრდის — არა ხარჯი, სესხი ან ანგარიშზე არსებული თანხა.</div>
         <button className="pill-btn btn-ghost" style={{ marginTop: 12 }} onClick={onClose}>კარგი</button>
       </motion.div>
     </Sheet>

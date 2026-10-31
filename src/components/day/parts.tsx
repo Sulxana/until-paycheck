@@ -70,7 +70,7 @@ export function QuizCard({ item, label, onAnswer, onNext, nextLabel, onAction }:
       <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         <span className="tag" style={{ background: '#fff3d6', color: '#8a5a00' }}>{label}</span>
         <span className="tag">{topic.icon} {topic.name}</span>
-        {item.bigThree && <span className="tag" style={{ background: '#e9f3fc', color: '#2c6aa0' }}>OECD · დიდი სამეული</span>}
+        {item.bigThree && <span className="tag" style={{ background: '#e9f3fc', color: '#2c6aa0' }}>OECD-ის 3 მთავარი კითხვიდან</span>}
       </div>
       <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.35, marginBottom: 12 }}>{item.q}</div>
 
@@ -108,7 +108,7 @@ export function QuizCard({ item, label, onAnswer, onNext, nextLabel, onAction }:
           <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, type: 'spring', damping: 20 }}>
             <div className="card" style={{ marginTop: 12, background: ok ? '#effaf2' : '#f3f6fa', boxShadow: 'none', border: `1.5px solid ${ok ? '#cdebd7' : '#dfe6ef'}` }}>
               <div className="h3" style={{ color: ok ? 'var(--good)' : 'var(--navy)' }}>
-                {ok ? '✓ სწორია!' : '💡 კარგი მცდელობა — ახლა უკვე იცი'}
+                {ok ? '✓ სწორია!' : 'კარგი მცდელობა — ახლა უკვე იცი'}
               </div>
               {!ok && <div className="small" style={{ marginTop: 4, fontWeight: 700 }}>სწორი პასუხი: {item.options[item.correct]}</div>}
               <div className="small" style={{ marginTop: 8, lineHeight: 1.5, color: 'var(--ink)' }}>{item.why}</div>

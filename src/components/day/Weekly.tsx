@@ -31,7 +31,7 @@ export function BeatCard() {
   const resultText = (o: typeof outcome, du: number, de: number) =>
     o === 'win' ? `აჯობე პროგნოზს! შენი ვარაუდი ${du} ₾-ით ცდებოდა, ჯიხოსი — ${de} ₾-ით`
       : o === 'tie' ? `ფრე! ორივე ${du} ₾-ით ასცდა`
-        : `ამჯერად ჯიხო უფრო ახლოს იყო: ${de} ₾ შენს ${du} ₾-თან`
+        : `ამჯერად ჯიხო უფრო ახლოს იყო: მისი ცდომილება ${de} ₾-ია, შენი — ${du} ₾`
 
   const check = () => {
     const du = Math.abs(guess - actual)
@@ -46,14 +46,14 @@ export function BeatCard() {
   return (
     <div className="card" style={{ padding: 16, background: 'linear-gradient(150deg,#f1ecff,#ffffff 65%)' }}>
       <div className="between">
-        <span className="tag" style={{ background: '#fff', color: 'var(--violet)' }}>🎯 კვირის გამოწვევა</span>
+        <span className="tag" style={{ background: '#fff', color: 'var(--violet)' }}>კვირის გამოწვევა</span>
         <span className="tiny muted">ერთხელ კვირაში</span>
       </div>
       <div className="h2" style={{ marginTop: 8 }}>აჯობე პროგნოზს</div>
       <div className="small" style={{ marginTop: 4, lineHeight: 1.45 }}>
         რამდენს დახარჯავ ამ კვირაში <b>საკვებზე</b>? ჯიხოსაც აქვს ვარაუდი.
       </div>
-      <div className="tiny muted" style={{ marginTop: 4 }}>გამარჯვება = უფრო ზუსტი ვარაუდი. ნაკლები ხარჯვა აქ ქულას არ გაძლევს.</div>
+      <div className="tiny muted" style={{ marginTop: 4 }}>იგებს, ვისი ვარაუდიც უფრო ზუსტია. ნაკლები ხარჯვა აქ ქულას არ გაძლევს.</div>
 
       <div style={{ textAlign: 'center', marginTop: 14 }}>
         <div className="tiny muted" style={{ fontWeight: 700 }}>შენი ვარაუდი</div>
@@ -72,11 +72,11 @@ export function BeatCard() {
             aria-label="შენი ვარაუდი ლარებში"
             style={{ width: '100%', accentColor: '#7a5af8', height: 28 }}
           />
-          <div className="between tiny muted"><span>{gel(lo)}</span><span>🙈 ჯიხოს ვარაუდი დამალულია</span><span>{gel(hi)}</span></div>
+          <div className="between tiny muted"><span>{gel(lo)}</span><span>ჯიხოს ვარაუდი დამალულია</span><span>{gel(hi)}</span></div>
           <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-primary" style={{ marginTop: 12, background: 'var(--violet)', boxShadow: '0 8px 18px rgba(122,90,248,0.3)' }} onClick={check}>
             შემოწმება
           </motion.button>
-          <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>დემო: კვირის ფაქტი ახლავე ჩანს</div>
+          <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>დემო: კვირის რეალური ხარჯი ახლავე გამოჩნდება</div>
         </>
       ) : (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -106,7 +106,7 @@ export function BeatCard() {
           <div className="row" style={{ marginTop: 10, background: outcome === 'win' ? '#e6f6ec' : '#f3f1fb', borderRadius: 14, padding: '10px 12px' }}>
             <Jikho size={48} mood={outcome === 'win' ? 'celebrate' : outcome === 'tie' ? 'happy' : 'calm'} stage={stage} accessories={gameOff ? [] : game.equipped} bob={false} />
             <div style={{ flex: 1 }}>
-              <div className="h3" style={{ color: outcome === 'win' ? 'var(--good)' : 'var(--ink)' }}>{outcome === 'win' ? '🏆 შენ აჯობე!' : outcome === 'tie' ? '🤝 ფრე' : 'ამჯერად — ჯიხომ'}</div>
+              <div className="h3" style={{ color: outcome === 'win' ? 'var(--good)' : 'var(--ink)' }}>{outcome === 'win' ? '🏆 შენ აჯობე!' : outcome === 'tie' ? '🤝 ფრე' : 'ამჯერად ჯიხომ აჯობა'}</div>
               <div className="small" style={{ lineHeight: 1.4 }}>
                 შენ {gel(dUser)}-ით ასცდი, ჯიხო — {gel(dEngine)}-ით. {outcome === 'win' ? 'შენ შენს კვირას უკეთ იცნობ — ესაა მიზანი.' : 'ყოველი ვარაუდი შენს „შინაგან პროგნოზს" ავარჯიშებს.'}
               </div>
@@ -128,13 +128,13 @@ export function QuestsCard({ cashDone, goMorning, goEvening }: { cashDone: boole
     { id: 'checks', icon: '🪵', title: 'სამი შემოწმება შესყიდვამდე', sub: 'მთავარზე: „რამის ყიდვა გინდა?"', value: checks, max: 3, done: checks >= 3, go: () => setTab('road') },
     { id: 'morning', icon: '☀️', title: 'დილის გაკვეთილი', sub: '3 კითხვა · ~2 წუთი', value: game.morningDone ? 1 : 0, max: 1, done: game.morningDone, go: goMorning },
     { id: 'evening', icon: '🌙', title: 'დღის დახურვა', sub: '40 წამი', value: game.eveningDone ? 1 : 0, max: 1, done: game.eveningDone, go: goEvening },
-    { id: 'cash', icon: '💵', title: 'ერთი ნაღდი ხარჯის ჩაწერა', sub: 'საღამოს დახურვაში', value: cashDone ? 1 : 0, max: 1, done: cashDone, go: goEvening },
+    { id: 'cash', icon: '💵', title: 'ერთი ნაღდი ხარჯის ჩაწერა', sub: 'დღის დახურვისას', value: cashDone ? 1 : 0, max: 1, done: cashDone, go: goEvening },
   ]
   const n = quests.filter(q => q.done).length
   return (
     <div className="card" style={{ padding: 14 }}>
       <div className="between" style={{ marginBottom: 10 }}>
-        <span className="h3">🏅 დღის კვესტები</span>
+        <span className="h3">დღის დავალებები</span>
         <span className="chip" style={{ background: n === 4 ? '#e6f6ec' : undefined, color: n === 4 ? 'var(--good)' : undefined }}>{n}/4</span>
       </div>
       <div style={{ display: 'grid', gap: 8 }}>

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { WeatherKind } from '../engine/engine'
 import { Jikho, JikhoMood, Accessory } from './Jikho'
@@ -26,20 +27,33 @@ interface Props {
 }
 
 /** tile positions along a winding mountain road, left (today) to right (payday camp) */
+function pointAt(t: number) {
+  return { x: 34 + t * 300, y: 236 - t * 70 + Math.sin(t * Math.PI * 2.2) * 16 }
+}
 function tilePoints(n: number) {
   const pts: { x: number; y: number }[] = []
-  for (let i = 0; i <= n; i++) {
-    const t = i / n
-    const x = 34 + t * 300
-    const y = 236 - t * 70 + Math.sin(t * Math.PI * 2.2) * 16
-    pts.push({ x, y })
-  }
+  for (let i = 0; i <= n; i++) pts.push(pointAt(i / n))
   return pts
 }
+const pct = (p: { x: number; y: number }) => ({ left: `${(p.x / 390) * 100}%`, top: `${(p.y / 290) * 100}%` })
 
 export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stage, accessories, height = 290, walking, bubble, onJikhoTap, hop = 0 }: Props) {
   const pts = tilePoints(nDays)
   const here = pts[Math.min(day, nDays)]
+  // walk along the curve from the previous tile to the new one
+  const prev = useRef(day)
+  const [walk, setWalk] = useState<{ left: string[]; top: string[] } | null>(null)
+  useEffect(() => {
+    const a = prev.current, b = Math.min(day, nDays)
+    prev.current = b
+    if (b <= a) { setWalk(null); return }
+    const steps = 16
+    const frames = Array.from({ length: steps + 1 }, (_, k) => pct(pointAt((a + ((b - a) * k) / steps) / nDays)))
+    setWalk({ left: frames.map(f => f.left), top: frames.map(f => f.top) })
+    const t = setTimeout(() => setWalk(null), 1350)
+    return () => clearTimeout(t)
+  }, [day, nDays])
+  const moving = walk !== null
   const [top, bottom] = SKY[weather]
   const dark = weather === 'storm'
   const roadPath = pts.map((p, i) => `${i ? 'L' : 'M'}${p.x} ${p.y}`).join(' ')
@@ -176,8 +190,8 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
       >
         <motion.div
           initial={false}
-          animate={{ left: `${(here.x / 390) * 100}%`, top: `${(here.y / 290) * 100}%` }}
-          transition={{ type: 'spring', stiffness: 60, damping: 14 }}
+          animate={walk ?? pct(here)}
+          transition={walk ? { duration: 1.25, ease: 'linear' } : { duration: 0 }}
           style={{ position: 'absolute', transform: 'translate(-50%, -88%)' }}
         >
           <AnimatePresence>
@@ -200,7 +214,7 @@ export function RoadScene({ weather, nDays, day, labels, paydayLabel, mood, stag
             )}
           </AnimatePresence>
           <motion.div key={hop} animate={hop ? { y: [0, -18, 0] } : undefined} transition={{ duration: 0.45 }} onClick={onJikhoTap} style={{ pointerEvents: onJikhoTap ? 'auto' : 'none', cursor: onJikhoTap ? 'pointer' : 'default' }}>
-            <Jikho size={92} mood={mood} stage={stage} accessories={acc} walking={walking} />
+            <Jikho size={92} mood={mood} stage={stage} accessories={acc} walking={walking && moving} />
           </motion.div>
         </motion.div>
       </motion.div>

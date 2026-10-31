@@ -115,17 +115,17 @@ export const useStore = create<Store>()(
           if (kind === 'check') {
             if (g.checksToday >= 3) { if (!off) get().toast('🪵', 'დღეს ხიდზე 3 ფიცარი უკვე დადე — ხვალ გააგრძელე'); return }
             patchGame(gg => ({ planks: gg.planks + 1, checksToday: gg.checksToday + 1 }))
-            if (!off) get().toast('🪵', `+1 ფიცარი ხიდზე · შემოწმება გადაწყვეტილებამდე`)
+            if (!off) get().toast('🪵', `+1 ფიცარი ხიდზე — ყიდვამდე შემოწმებისთვის`)
             if (g.checksToday + 1 === 3 && !g.questsDone.includes('three-checks')) {
               patchGame(gg => ({ questsDone: [...gg.questsDone, 'three-checks'] }))
-              setTimeout(() => get().toast('🏅', 'კვესტი შესრულდა: „სამი შემოწმება შესყიდვამდე"'), 700)
+              setTimeout(() => get().toast('🏅', 'დავალება შესრულდა: „სამი შემოწმება შესყიდვამდე"'), 700)
             }
           } else if (kind === 'lesson') {
             const books = g.books + 1
             const topicUp = books % 6 === 0
             patchGame(gg => ({ books, topics: topicUp ? gg.topics + 1 : gg.topics, morningDone: true, lessonCursor: gg.lessonCursor + 3 }))
             const s = lightStreak()
-            if (!off) get().toast('📗', `+1 წიგნი სკოლაში${s ? ` · 🏮 სერია ${s} დღე` : ''}`)
+            if (!off) get().toast('📗', `+1 წიგნი სკოლაში${s ? ` · სერია ${s} დღე` : ''}`)
             if (topicUp && !off) setTimeout(() => get().toast('🏫', 'სკოლაში ახალი ოთახი: თემა ათვისებულია'), 800)
             if (!g.pendingChoice && !off) {
               const pool = COSMETIC_POOL.map(c => c.id).filter(c => !g.cosmetics.includes(c))
@@ -136,7 +136,7 @@ export const useStore = create<Store>()(
             const xp = g.stationXp + 1
             const up = xp >= 3 && g.station < 5
             patchGame(gg => ({ confirmed: [...gg.confirmed, payload], stationXp: up ? 0 : xp, station: up ? gg.station + 1 : gg.station }))
-            if (!off) get().toast('📡', up ? `ამინდის სადგური ${g.station + 1}/5 — დიაპაზონი ვიწროვდება` : `დადასტურდა: ${payload} · სადგური ${xp}/3`)
+            if (!off) get().toast('📡', up ? `ამინდის სადგური ${g.station + 1}/5 — პროგნოზი უფრო ზუსტი ხდება` : `დადასტურდა: ${payload} · სადგური ${xp}/3`)
           } else if (kind === 'save') {
             const amount = payload as number
             patchGame(gg => {
@@ -144,10 +144,10 @@ export const useStore = create<Store>()(
               return { qvevri: q }
             })
             const q0 = get().games[get().personaId].qvevri[0]
-            if (!off && q0) get().toast('🏺', q0.sealedAt ? `ქვევრი „${q0.name}" დაილუქა! 🎉` : `+${amount} ₾ ქვევრში „${q0.name}" · ${q0.filled}/${q0.target}`)
+            if (!off && q0) get().toast('🏺', q0.sealedAt ? `ქვევრი „${q0.name}" დაილუქა!` : `+${amount} ₾ ქვევრში „${q0.name}" · ${q0.filled}/${q0.target}`)
           } else if (kind === 'evening') {
             patchGame(() => ({ eveningDone: true }))
-            if (!off) get().toast('🌙', 'დღე დაიხურა · ხვალ დილით ახალი ამინდი')
+            if (!off) get().toast('🌙', 'დღე დაიხურა · ხვალ დილით — ახალი ამინდი')
           } else if (kind === 'beat') {
             if (!off) get().toast('🎯', payload)
           }
@@ -182,7 +182,7 @@ export const useStore = create<Store>()(
         },
         toggleEquip: a => {
           const g0 = get().games[get().personaId]
-          if (!g0.equipped.includes(a) && g0.equipped.length >= 2) get().toast('🎒', 'ერთად მაქსიმუმ 2 ნივთი — ძველი მოიხსნა')
+          if (!g0.equipped.includes(a) && g0.equipped.length >= 2) get().toast('🎒', 'ერთად მხოლოდ 2 ნივთი ეტევა — ძველი მოიხსნა')
           patchGame(gg => ({ equipped: gg.equipped.includes(a) ? gg.equipped.filter(x => x !== a) : [...gg.equipped, a].slice(-2) }))
         },
         setBeatGuess: v => patchGame(() => ({ beatGuess: v })),

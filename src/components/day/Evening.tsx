@@ -17,7 +17,7 @@ const CASH_TAGS = [
   { id: 'food', label: '🛒 საკვები' },
   { id: 'transport', label: '🚌 ტრანსპორტი' },
   { id: 'other', label: '📦 სხვა' },
-  { id: 'none', label: '💳 არ იყო ნაღდი' },
+  { id: 'none', label: '💳 ნაღდი არ დამიხარჯავს' },
 ]
 
 export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean) => void; onAction: (k: ActionKind) => void; localKey: string }) {
@@ -50,9 +50,9 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
 
   const mood: JikhoMood = step === 1 ? (recallOk === null ? 'thinking' : recallOk ? 'celebrate' : 'calm') : 'talking'
   const line =
-    step === 0 ? 'ერთი ნაღდი ხარჯი — და პროგნოზი ზუსტდება.'
+    step === 0 ? 'ჩაწერე ერთი ნაღდი ხარჯი — პროგნოზი უფრო ზუსტი გახდება.'
       : step === 1 ? (recallOk === null ? (game.morningDone ? 'დილით ეს ვისწავლეთ. გახსოვს?' : 'ერთი გამეორება ადრე ნასწავლიდან.') : recallOk ? 'გახსოვს! ასე რჩება ცოდნა. 🎉' : 'არაუშავს — ხვალ ისევ შეგახსენებ.')
-        : 'ბოლო: ახალი ნაკადი შევნიშნე.'
+        : 'ბოლო კითხვა: ახალი განმეორებადი ხარჯი შევნიშნე.'
 
   const tag = (id: string) => {
     setCash(localKey, id)
@@ -83,7 +83,7 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
           </motion.div>
           <div style={{ fontSize: 22, fontWeight: 800, marginTop: 4 }}>დღე დაიხურა</div>
           <div className="small" style={{ opacity: 0.85, marginTop: 4 }}>
-            დღეს {gel(spent)} · ჩვეულებრივ ~{gel(usual)}{cash && cash !== 'none' ? ' · +1 ნაღდი ჩანაწერი' : ''}
+            დღეს დახარჯე {gel(spent)} · ჩვეულებრივ ~{gel(usual)}{cash && cash !== 'none' ? ' · +1 ნაღდი ჩანაწერი' : ''}
           </div>
           <div className="small" style={{ opacity: 0.85, marginTop: 2 }}>ჯიხო ისვენებს. ხვალ დილით — ახალი ამინდი.</div>
         </div>
@@ -96,16 +96,16 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
     <div style={{ display: 'grid', gap: 12 }}>
       <div className="card" style={{ padding: 14, background: 'linear-gradient(150deg,#e7ecf6,#ffffff 70%)' }}>
         <div className="between">
-          <span className="tag" style={{ background: '#fff' }}>🌙 დღის დახურვა · 40 წამი</span>
-          <span className="tiny muted">არასავალდებულო · ნაღდით ხარჯვისას სასარგებლო</span>
+          <span className="tag" style={{ background: '#fff' }}>დღის დახურვა · 40 წამი</span>
+          <span className="tiny muted">არასავალდებულო · გამოგადგება, თუ ნაღდით იხდი</span>
         </div>
         <div className="row" style={{ alignItems: 'baseline', gap: 8, marginTop: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 700 }}>დღეს:</span>
+          <span style={{ fontSize: 15, fontWeight: 700 }}>დღეს დახარჯე:</span>
           <span style={{ fontSize: 30, fontWeight: 800, letterSpacing: -0.5 }}>{gel(spent)}</span>
           <span className="small muted">· ჩვეულებრივ ~{gel(usual)}</span>
         </div>
         <div className="tiny muted" style={{ marginTop: 2 }}>
-          {diff === 0 ? 'ზუსტად ჩვეული დღე' : diff < 0 ? `ჩვეულზე ${fmt(-diff)} ₾-ით ნაკლები` : `ჩვეულზე ${fmt(diff)} ₾-ით მეტი`} · ბარათის ოპერაციებიდან
+          {diff === 0 ? 'ზუსტად ჩვეული დღე' : diff < 0 ? `ჩვეულზე ${fmt(-diff)} ₾-ით ნაკლები` : `ჩვეულზე ${fmt(diff)} ₾-ით მეტი`} · ბარათით გადახდებიდან
         </div>
       </div>
 
@@ -115,8 +115,8 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
       <AnimatePresence mode="wait">
         {step === 0 && (
           <motion.div key="cash" className="card" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
-            <div className="tag" style={{ display: 'inline-block', marginBottom: 8 }}>💵 ნაღდი ფული</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>ბანკომატი 50 ₾ — რა იყო?</div>
+            <div className="tag" style={{ display: 'inline-block', marginBottom: 8 }}>ნაღდი ფული</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>ბანკომატიდან 50 ₾ გამოიტანე — რაზე დახარჯე?</div>
             <div className="small muted" style={{ marginTop: 2 }}>ნაღდ ხარჯს ბანკი ვერ ხედავს — ერთი შეხება საკმარისია.</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
               {CASH_TAGS.map(t => {
@@ -140,7 +140,7 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
           <motion.div key="recall" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
             <QuizCard
               item={recall}
-              label={game.morningDone ? '🌙 დილის ფაქტი — გაიხსენე' : '🔁 გამეორება'}
+              label={game.morningDone ? 'დილის კითხვა — გაიხსენე' : 'გამეორება'}
               onAnswer={ok => setRecallOk(ok)}
               onNext={() => setStep(2)}
               nextLabel="შემდეგი →"
@@ -152,12 +152,12 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
         {step === 2 && (
           <motion.div key="bolt" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} style={{ display: 'grid', gap: 12 }}>
             <div className="card">
-              <div className="tag" style={{ display: 'inline-block', marginBottom: 8, background: '#e9f3fc', color: '#2c6aa0' }}>📡 ადრეული შემჩნევა</div>
-              <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.35 }}>ახალი ნაკადი: Bolt ~8 ₾, 2-ჯერ ამ თვეში — ყოველთვიურია?</div>
-              <div className="small muted" style={{ marginTop: 4 }}>შენი პასუხით ამინდის სადგური დიაპაზონს აზუსტებს.</div>
+              <div className="tag" style={{ display: 'inline-block', marginBottom: 8, background: '#e9f3fc', color: '#2c6aa0' }}>ადრეული შემჩნევა</div>
+              <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.35 }}>ამ თვეში Bolt-ში 2-ჯერ გადაიხადე ~8 ₾. ეს ხარჯი ყოველთვე გექნება?</div>
+              <div className="small muted" style={{ marginTop: 4 }}>შენი პასუხით პროგნოზი უფრო ზუსტი გახდება.</div>
               {boltConfirmed || bolt ? (
                 <div className="small" style={{ marginTop: 12, fontWeight: 700, color: 'var(--good)' }}>
-                  {bolt === 'no' ? '✓ ჩაიწერა: ერთჯერადი. პროგნოზში არ დაემატება.' : '✓ დადასტურდა: Bolt პროგნოზში ყოველთვიურ ნაკადად ჩაჯდა.'}
+                  {bolt === 'no' ? '✓ ჩაიწერა: ერთჯერადი ხარჯია, პროგნოზს არ დაემატება.' : '✓ დადასტურდა: Bolt პროგნოზს ყოველთვიურ ხარჯად დაემატა.'}
                 </div>
               ) : (
                 <div className="row" style={{ marginTop: 12 }}>
@@ -168,7 +168,7 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
             </div>
             {(boltConfirmed || bolt) && (
               <motion.button initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} whileTap={{ scale: 0.97 }} className="pill-btn btn-primary" style={{ background: '#26385a' }} onClick={close}>
-                🌙 დღის დახურვა
+                დღის დახურვა
               </motion.button>
             )}
           </motion.div>

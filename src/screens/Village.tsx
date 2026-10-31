@@ -53,7 +53,7 @@ export function Village() {
       {hardship && (
         <motion.div className="pad" style={{ paddingTop: 14 }} {...enter(0)}>
           <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', fontSize: 13, lineHeight: 1.45, color: 'var(--ink-2)' }}>
-            ❄️ <b style={{ color: 'var(--ink)' }}>გაჭირვების რეჟიმი:</b> სოფელი გაყინულია — არაფერი ინგრევა, არაფერი იკარგება.
+            ❄️ <b style={{ color: 'var(--ink)' }}>მხარდაჭერის რეჟიმი:</b> სოფელი გაყინულია — არაფერი ინგრევა და არაფერი იკარგება.
           </div>
         </motion.div>
       )}
@@ -62,7 +62,7 @@ export function Village() {
       <motion.div className="pad" style={{ paddingTop: hardship ? 12 : 18 }} {...enter(0)}>
         <div className="between">
           <div className="h2" style={{ fontSize: 22 }}>ჯიხოს სოფელი</div>
-          <span className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} title="სერია და გაყინვები">{hardship ? '❄ სერია გაყინულია' : `🏮 ${game.streak} დღე · ❄ ${game.freezes}`}</span>
+          <span className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} title="სერია და გაყინვის დღეები">{hardship ? '❄ სერია გაყინულია' : `🏮 ${game.streak} დღე · ❄ ${game.freezes}`}</span>
         </div>
         <div className="card" style={{ marginTop: 10, padding: '10px 12px' }}>
           <div className="row" style={{ gap: 10 }}>
@@ -82,17 +82,17 @@ export function Village() {
       <motion.div style={{ marginTop: 12 }} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.45, delay: 0.1 }}>
         <VillageScene game={game} stage={stage} hardship={hardship} tips={jikhoTips(game, hardship)} onOpen={setPlace} />
       </motion.div>
-      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>👆 შეეხე ადგილს — გაიგებ, რა ზრდის მას</div>
+      <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>შეეხე ადგილს — გაიგებ, რა ზრდის მას</div>
 
       {/* year map */}
       <motion.div className="pad" style={{ marginTop: 16 }} {...enter(2)}>
         <div className="card">
           <div className="between">
-            <div className="h3">🗺️ წლის რუკა</div>
+            <div className="h3">წლის რუკა</div>
             <span className="tag">{cycles}/12</span>
           </div>
           <div className="small muted" style={{ marginTop: 4, marginBottom: 14, lineHeight: 1.45 }}>
-            ყოველი დასრულებული ხელფასის ციკლი საქართველოს რუკაზე ერთ ადგილს ხსნის.
+            ყოველი გავლილი თვე (ხელფასიდან ხელფასამდე) საქართველოს რუკაზე ახალ ადგილს ხსნის.
           </div>
           <YearMap cycles={game.cycles} />
         </div>
@@ -102,7 +102,7 @@ export function Village() {
       <motion.div className="pad" style={{ marginTop: 12 }} {...enter(3)}>
         <div className="card">
           <div className="between">
-            <div className="h3">🎒 ჯიხოს ნივთები</div>
+            <div className="h3">ჯიხოს ნივთები</div>
             <span className="tag">აცვია {game.equipped.length}/2</span>
           </div>
           <div className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>
@@ -111,7 +111,7 @@ export function Village() {
           <Wardrobe game={game} stage={stage} onToggle={toggleEquip} />
           {lockedCount > 0 && (
             <div className="small" style={{ marginTop: 12, background: '#f7f3ec', borderRadius: 12, padding: '8px 10px', color: 'var(--ink-2)', lineHeight: 1.45 }}>
-              🔒 დახურულ ნივთებს იღებ კვესტით ან კვირის დასკვნით. <b>ფულით არაფერი იყიდება.</b>
+              ახალ ნივთებს გაკვეთილებისა და უსაფრთხო ხელფასის დღისთვის იღებ. <b>ფულით არაფერი იყიდება.</b>
             </div>
           )}
         </div>

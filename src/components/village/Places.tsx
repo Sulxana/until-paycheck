@@ -199,7 +199,7 @@ export function CellarPlace({ qvevri }: { qvevri: Qvevri[] }) {
 }
 
 /* ───────────────────────── Weather station ───────────────────────── */
-export const INSTRUMENTS = ['ფლუგერი', 'ანემომეტრი', 'თერმომეტრის ყუთი', 'წვიმის საზომი', 'თანამგზავრული თეფში']
+export const INSTRUMENTS = ['ქარის ისარი', 'ქარის საზომი', 'თერმომეტრის ყუთი', 'წვიმის საზომი', 'თანამგზავრული თეფში']
 
 export function StationPlace({ level }: { level: number }) {
   const lv = Math.max(1, Math.min(STATION_MAX, level))

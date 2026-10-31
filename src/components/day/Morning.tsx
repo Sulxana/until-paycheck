@@ -11,7 +11,7 @@ import { useDayLocal } from './local'
 const r10 = (v: number) => Math.round(v / 10) * 10
 
 const ASK_LINES = ['მოდი, ვნახოთ…', 'ეს საინტერესოა — შენ რას ფიქრობ?', 'ბოლო კითხვა — შენი რიცხვებით!']
-const OK_LINES = ['ზუსტად! 🎉', 'ყოჩაღ! ეს ცოდნა ფულს ზოგავს.', 'ბრავო — შენი რიცხვები შენზე კარგად არავინ იცის!']
+const OK_LINES = ['ზუსტად!', 'ყოჩაღ! ეს ცოდნა ფულს ზოგავს.', 'ბრავო — შენი რიცხვები შენზე კარგად არავინ იცის!']
 const SOFT_LINES = ['არაუშავს — ახლა უკვე იცი.', 'კარგი მცდელობა! წესი ქვემოთაა.', 'ესეც სწავლაა — მთავარი ის არის, რომ დაითვალე.']
 
 export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (f: boolean) => void; onAction: (k: ActionKind) => void; goEvening: () => void; localKey: string }) {
@@ -60,12 +60,12 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
       <motion.div key="intro" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ display: 'grid', gap: 12 }}>
         <div className="card" style={{ padding: 18, background: `linear-gradient(150deg, ${WCOLOR[w]}26, #ffffff 70%)`, position: 'relative', overflow: 'hidden' }}>
           <div className="between">
-            <span className="tag" style={{ background: '#fff' }}>☀️ დილის ამინდი · 10 წამი</span>
+            <span className="tag" style={{ background: '#fff' }}>დილის ამინდი · 10 წამი</span>
             <span className="tiny muted">{p.dayLabels[v.day] ?? p.paydayLabel}</span>
           </div>
           <div style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.35, marginTop: 10 }}>
             {v.daysLeft > 0 ? (
-              <>ხელფასამდე {v.daysLeft} დღე · სავარაუდოდ ~{fmt(r10(v.landing.p50))} ₾ დაგრჩება</>
+              <>ხელფასამდე {v.daysLeft} დღეა · სავარაუდოდ ~{fmt(r10(v.landing.p50))} ₾ დაგრჩება</>
             ) : (
               <>დღეს ხელფასის დღეა 🎉</>
             )}
@@ -76,7 +76,7 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
               mood={v.hardship ? 'calm' : 'talking'}
               stage={stage}
               accessories={acc}
-              text={v.hardship ? 'რთული პერიოდია. დღეს სამი პატარა ნაბიჯი — ერთად, ჩქარების გარეშე.' : 'სამი მოკლე კითხვა — ერთი გამეორება, ერთი ახალი და ერთი შენი რიცხვებით.'}
+              text={v.hardship ? 'რთული პერიოდია. დღეს სამ პატარა ნაბიჯს გადავდგამთ — ერთად და აუჩქარებლად.' : 'სამი მოკლე კითხვა — ერთი გამეორება, ერთი ახალი და ერთი შენი რიცხვებით.'}
             />
           </div>
         </div>
@@ -84,7 +84,7 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
         <div className="card" style={{ padding: 14 }}>
           <div className="between" style={{ marginBottom: 10 }}>
             <span className="h3">დღის 3 კითხვა</span>
-            <span className="chip">⏱ ~2 წუთი</span>
+            <span className="chip">~2 წუთი</span>
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             {slots.map((s, i) => (
@@ -119,7 +119,7 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
         </div>
         <AnimatePresence mode="wait">
           <motion.div key={s.item.id + idx} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: 'spring', damping: 24, stiffness: 260 }}>
-            <QuizCard item={s.item} label={s.label} onAnswer={answer} onNext={next} nextLabel={idx < 2 ? 'შემდეგი →' : 'დასრულება 🎉'} onAction={onAction} />
+            <QuizCard item={s.item} label={s.label} onAnswer={answer} onNext={next} nextLabel={idx < 2 ? 'შემდეგი →' : 'დასრულება'} onAction={onAction} />
           </motion.div>
         </AnimatePresence>
         <button className="small muted" style={{ display: 'block', margin: '14px auto 0', fontWeight: 600 }} onClick={() => { setPhase('intro'); onFocus(false) }}>
@@ -138,9 +138,9 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
         <motion.div initial={{ scale: 0.4, y: 30 }} animate={{ scale: 1, y: 0 }} transition={{ type: 'spring', damping: 9 }}>
           <Jikho size={130} mood="celebrate" stage={stage} accessories={acc} />
         </motion.div>
-        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>დილა დახურულია! 🎉</div>
+        <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>დილის გაკვეთილი დასრულდა!</div>
         <div className="small muted" style={{ marginTop: 2 }}>
-          {score !== undefined ? `3-დან ${score} სწორი · ${score === 3 ? 'იდეალური დილა' : 'ყოველი პასუხი სწავლაა'}` : 'დღევანდელი გაკვეთილი შესრულებულია'}
+          {score !== undefined ? `3-დან ${score} სწორი პასუხი · ${score === 3 ? 'იდეალური დილა' : 'ყოველი პასუხი სწავლაა'}` : 'დღევანდელი გაკვეთილი შესრულებულია'}
         </div>
         <div className="row" style={{ justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
           {!gameOff && <motion.span initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="chip" style={{ background: '#fff' }}>📗 +1 წიგნი · სულ {game.books}</motion.span>}
@@ -161,12 +161,12 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
             </div>
           ))}
         </div>
-        <div className="tiny muted" style={{ marginTop: 8 }}>გამეორება ბრუნდება 1, 3 და 7 დღის შემდეგ — ასე რჩება მეხსიერებაში.</div>
+        <div className="tiny muted" style={{ marginTop: 8 }}>ნასწავლს 1, 3 და 7 დღის შემდეგ გავიმეორებთ — ასე უკეთ დაგამახსოვრდება.</div>
       </div>
 
       {!gameOff && game.pendingChoice && (
         <motion.div className="card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} style={{ padding: 14 }}>
-          <div className="h3">🎁 აირჩიე საჩუქარი ჯიხოსთვის</div>
+          <div className="h3">აირჩიე საჩუქარი ჯიხოსთვის</div>
           <div className="row" style={{ marginTop: 10, justifyContent: 'space-between' }}>
             {game.pendingChoice.map(a => (
               <motion.button whileTap={{ scale: 0.92 }} key={a} onClick={() => choose(a)} style={{ textAlign: 'center', flex: 1 }}>
@@ -180,7 +180,7 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
 
       {!game.eveningDone && (
         <motion.button whileTap={{ scale: 0.97 }} className="pill-btn btn-white" onClick={goEvening}>
-          🌙 საღამოს: ერთი კითხვა ამ თემიდან · 40 წამი
+          საღამოს: ერთი კითხვა ამ თემიდან · 40 წამი
         </motion.button>
       )}
     </motion.div>

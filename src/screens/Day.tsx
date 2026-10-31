@@ -34,9 +34,9 @@ export function Day() {
   const go = (s: Seg) => { setFocus(false); setSeg(s) }
 
   const SEGS: { id: Seg; label: string; done: boolean }[] = [
-    { id: 'morning', label: '☀️ დილა', done: game.morningDone },
-    { id: 'evening', label: '🌙 საღამო', done: game.eveningDone },
-    { id: 'week', label: '🎯 კვირა', done: game.beatGuess !== null },
+    { id: 'morning', label: 'დილა', done: game.morningDone },
+    { id: 'evening', label: 'საღამო', done: game.eveningDone },
+    { id: 'week', label: 'კვირა', done: game.beatGuess !== null },
   ]
 
   return (
@@ -59,7 +59,7 @@ export function Day() {
 
         {v.hardship && (
           <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', marginTop: 10, fontSize: 13, lineHeight: 1.45 }}>
-            🤝 <b>მხარდაჭერის რეჟიმი.</b> ❄ სერია გაყინულია — არაფერი იკარგება. დილით — პატარა ნაბიჯები: რომელი გადასახადი პირველი და როგორ ვესაუბროთ ბანკს.
+            <b>მხარდაჭერის რეჟიმი.</b> სერია გაყინულია — არაფერი იკარგება. დილით პატარა ნაბიჯებს გავივლით: რომელი გადასახადია პირველი რიგის და როგორ დაველაპარაკოთ ბანკს.
           </div>
         )}
 

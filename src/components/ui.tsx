@@ -49,9 +49,9 @@ export const WEMOJI: Record<WeatherKind, string> = { sun: '☀️', cloud: '🌥
 
 export function WeatherChip({ w, p }: { w: WeatherKind; p?: number }) {
   return (
-    <span className="chip" style={{ background: WCOLOR[w] + '22', color: WCOLOR[w] }}>
+    <span className="chip" style={{ background: WCOLOR[w] + '22', color: WCOLOR[w], whiteSpace: 'normal', flexWrap: 'wrap', rowGap: 2 }}>
       {WEMOJI[w]} {WEATHER_LABEL[w]}
-      {p !== undefined && <span style={{ opacity: 0.85, fontWeight: 600 }}>· 10-დან {Math.round(p * 10)}-ში ზღვარს ქვემოთ</span>}
+      {p !== undefined && <span style={{ opacity: 0.85, fontWeight: 600 }}>· 10 თვიდან {Math.round(p * 10)}-ში ზღვარს ქვემოთ</span>}
     </span>
   )
 }
@@ -70,7 +70,7 @@ export function RangeBar({ p10, p50, p90, cushion, min, max, compare }: { p10: n
       <motion.div initial={false} animate={{ left: x(p10) + '%', width: Math.max(2, x(p90) - x(p10)) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 15, height: 16, borderRadius: 8, background: 'rgba(31,59,87,0.55)' }} />
       <motion.div initial={false} animate={{ left: x(p50) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 11, width: 24, height: 24, marginLeft: -12, borderRadius: '50%', background: '#1f3b57', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }} />
       <div style={{ position: 'absolute', left: x(cushion) + '%', top: 8, bottom: compare ? 22 : 4, width: 0, borderLeft: '2px dashed #d9534f' }} />
-      <div className="tiny" style={{ position: 'absolute', left: x(cushion) + '%', top: compare ? 44 : 34, transform: 'translateX(-50%)', color: '#d9534f', fontWeight: 700, whiteSpace: 'nowrap' }}>ზღვარი {fmt(cushion)}</div>
+      <div className="tiny" style={{ position: 'absolute', left: x(cushion) + '%', top: compare ? 44 : 34, transform: 'translateX(-50%)', color: '#d9534f', fontWeight: 700, whiteSpace: 'nowrap' }}>ზღვარი {fmt(cushion)} ₾</div>
       <div className="tiny muted" style={{ position: 'absolute', left: 0, top: -6 }}>{fmt(p10)} ₾</div>
       <div className="tiny muted" style={{ position: 'absolute', right: 0, top: -6 }}>{fmt(p90)} ₾</div>
     </div>
@@ -78,7 +78,7 @@ export function RangeBar({ p10, p50, p90, cushion, min, max, compare }: { p10: n
 }
 
 export function Disclaimer({ children }: { children?: ReactNode }) {
-  return <div className="disclaimer">ℹ️ {children ?? 'ინფორმაციაა, არა რჩევა. პროგნოზი შენი ისტორიიდან ითვლება.'}</div>
+  return <div className="disclaimer">ℹ️ {children ?? 'ეს ინფორმაციაა და არა რჩევა. პროგნოზი შენი ხარჯების ისტორიიდან ითვლება.'}</div>
 }
 
 export function BankChip({ label, amount, color, muted }: { label: string; amount: number; color: string; muted?: boolean }) {

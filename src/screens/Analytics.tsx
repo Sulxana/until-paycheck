@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { FanChart } from '../components/FanChart'
-import { WeatherChip, Disclaimer } from '../components/ui'
+import { Disclaimer } from '../components/ui'
 import { BANK_META } from '../engine/personas'
-import { CycleRow, Engine } from '../engine/engine'
+import { CycleRow, Engine, KA_MONTHS_FULL } from '../engine/engine'
 
 type Seg = 'payday' | 'year' | 'spend'
 
@@ -14,9 +14,10 @@ export function Analytics() {
   return (
     <div className="screen" style={{ background: 'var(--paper)' }}>
       <div className="pad" style={{ paddingTop: 18 }}>
-        <div className="between"><h2 className="h2" style={{ fontSize: 24 }}>ანალიზი</h2><span className="tag">1 000 სცენარი</span></div>
+        <h2 className="h2" style={{ fontSize: 26 }}>ანალიზი</h2>
+        <div className="small muted" style={{ marginTop: 2 }}>შენი ფული უბრალო სიტყვებით</div>
         <div className="seg" style={{ marginTop: 12 }}>
-          {([['payday', 'ხელფასამდე'], ['year', '12 თვე'], ['spend', 'ხარჯები']] as [Seg, string][]).map(([k, l]) => (
+          {([['payday', 'ხელფასამდე'], ['year', 'მთელი წელი'], ['spend', 'ხარჯები']] as [Seg, string][]).map(([k, l]) => (
             <button key={k} className={seg === k ? 'on' : ''} onClick={() => setSeg(k)}>{l}</button>
           ))}
         </div>
@@ -32,6 +33,18 @@ export function Analytics() {
   )
 }
 
+/** a card that leads with one plain sentence, then the picture, then a plain-words legend */
+function Insight({ kicker, title, children, legend }: { kicker: string; title: ReactNode; children: ReactNode; legend?: ReactNode }) {
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)', letterSpacing: 0.3 }}>{kicker}</div>
+      <div className="display" style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3, margin: '4px 0 12px', textWrap: 'balance' as any }}>{title}</div>
+      {children}
+      {legend && <div className="small muted" style={{ marginTop: 10 }}>{legend}</div>}
+    </div>
+  )
+}
+
 function Payday() {
   const v = useToday()
   const { e, p } = v
@@ -41,92 +54,101 @@ function Payday() {
   const bills = p.due.map(d => ({ idx: d.dayIndex, name: d.name, amount: d.amount ?? Math.round((d.range![0] + d.range![1]) / 2) }))
   const fixedShare = Math.round((e.fixedTotal / p.salary) * 100)
   const varShare = Math.round((e.monthlyVarMedian / p.salary) * 100)
-  const left = 100 - fixedShare - varShare
+  const left = Math.max(0, 100 - fixedShare - varShare)
+  const r10 = (n: number) => Math.round(n / 10) * 10
   return (
     <>
-      <div className="card">
-        <div className="between"><div className="h3">ბალანსი ხელფასამდე</div><WeatherChip w={e.landing.weather} /></div>
-        <div className="small muted" style={{ margin: '4px 0 6px' }}>დღეს {gel(e.spendable)} → ხელფასის დღეს ~{gel(Math.round(e.landing.p50 / 10) * 10)} ({rangeText(Math.round(e.landing.p10 / 10) * 10, Math.round(e.landing.p90 / 10) * 10)})</div>
+      <Insight
+        kicker="ხელფასამდე"
+        title={<>ხელფასის დღეს სავარაუდოდ <span style={{ color: 'var(--navy)' }}>~{fmt(r10(e.landing.p50))} ₾</span> დაგრჩება</>}
+        legend={<>ცისფერი ზოლი — სად შეიძლება აღმოჩნდე ({rangeText(r10(e.landing.p10), r10(e.landing.p90))}). მუქი ხაზი — ყველაზე სავარაუდო გზა. ნარინჯისფერი წერტილები — გადასახადები.</>}
+      >
         <FanChart data={fan} cushion={e.cushion} bills={bills} />
-        <div className="row tiny muted" style={{ gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
-          <span><span style={{ display: 'inline-block', width: 10, height: 10, background: '#5aa9e6', opacity: 0.4, borderRadius: 3 }} /> 10 მსგავსი თვიდან 8</span>
-          <span>━ ყველაზე სავარაუდო</span>
-          <span style={{ color: '#ff7a59' }}>● გადასახადი</span>
-        </div>
-      </div>
+      </Insight>
 
-      <div className="card">
-        <div className="h3">შენი თვე ერთ ზოლში</div>
-        <div style={{ display: 'flex', height: 26, borderRadius: 10, overflow: 'hidden', margin: '10px 0 8px' }}>
-          <motion.div initial={{ width: 0 }} animate={{ width: `${fixedShare}%` }} transition={{ duration: 0.8 }} style={{ background: '#1f3b57' }} />
-          <motion.div initial={{ width: 0 }} animate={{ width: `${varShare}%` }} transition={{ duration: 0.8, delay: 0.2 }} style={{ background: '#5aa9e6' }} />
-          <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(0, left)}%` }} transition={{ duration: 0.8, delay: 0.4 }} style={{ background: '#6fbf73' }} />
+      <Insight
+        kicker="შენი თვე"
+        title={<>ხელფასის <span style={{ color: '#1f3b57' }}>{fixedShare}%</span> თავიდანვე დაკავებულია</>}
+        legend="ფიქსირებული ხარჯი ყოველთვე მეორდება: ქირა, კომუნალური, განვადება. ის ხელფასიდან პირველივე დღეებში მიდის."
+      >
+        <div style={{ display: 'flex', height: 40, borderRadius: 12, overflow: 'hidden' }}>
+          {[
+            { w: fixedShare, c: '#1f3b57', t: 'ფიქსირებული' },
+            { w: varShare, c: '#5aa9e6', t: 'ყოველდღიური' },
+            { w: left, c: '#6fbf73', t: 'რჩება' },
+          ].map((s, i) => (
+            <motion.div key={s.t} initial={{ width: 0 }} animate={{ width: `${s.w}%` }} transition={{ duration: 0.8, delay: i * 0.2 }} style={{ background: s.c, color: '#fff', display: 'grid', placeItems: 'center', fontSize: 13, fontWeight: 800, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+              {s.w >= 10 ? `${s.w}%` : ''}
+            </motion.div>
+          ))}
         </div>
-        <div className="row tiny" style={{ gap: 12, flexWrap: 'wrap' }}>
-          <span>■ ფიქსირებული <b>{gel(e.fixedTotal)}</b> · {fixedShare}%</span>
-          <span style={{ color: '#3d86c6' }}>■ ცვლადი ~<b>{gel(e.monthlyVarMedian)}</b> · {varShare}%</span>
-          <span style={{ color: '#4e9d57' }}>■ რჩება ~<b>{gel(Math.round(e.medianSurplus))}</b></span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 10 }}>
+          {[
+            { c: '#1f3b57', t: 'ფიქსირებული', v: gel(e.fixedTotal) },
+            { c: '#5aa9e6', t: 'ყოველდღიური', v: `~${gel(e.monthlyVarMedian)}` },
+            { c: '#6fbf73', t: 'რჩება', v: `~${gel(Math.round(e.medianSurplus))}` },
+          ].map(s => (
+            <div key={s.t}>
+              <div className="tiny muted" style={{ fontWeight: 700 }}><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 3, background: s.c, marginRight: 5 }} />{s.t}</div>
+              <div style={{ fontWeight: 800, fontSize: 16 }}>{s.v}</div>
+            </div>
+          ))}
         </div>
-        <div className="small" style={{ marginTop: 10, background: '#fff7e0', borderRadius: 10, padding: '8px 10px' }}>📘 ხელფასის {fixedShare >= 50 ? 'ნახევარზე მეტი' : `${fixedShare}%`} დაპირებულია, სანამ პირველ ლარს დახარჯავ.</div>
-      </div>
+      </Insight>
 
-      <div className="card">
-        <div className="between"><div className="h3">რა გელოდება ხელფასამდე</div><span className="tag">მტკიცებულებით</span></div>
-        <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+      <Insight kicker="გადასახადები" title="ხელფასამდე ეს გადასახადები გელის" legend="ყოველი დადასტურება პროგნოზს აზუსტებს.">
+        <div style={{ display: 'grid', gap: 8 }}>
           {p.due.map(d => {
             const amt = d.amount ?? Math.round((d.range![0] + d.range![1]) / 2)
             const done = d.dayIndex < v.day
             return (
-              <div key={d.name} className="between" style={{ padding: '8px 10px', borderRadius: 12, background: done ? '#f3f6f2' : '#fbf8f2', opacity: done ? 0.6 : 1 }}>
+              <div key={d.name} className="between" style={{ padding: '10px 12px', borderRadius: 14, background: done ? '#f3f6f2' : '#fbf8f2', opacity: done ? 0.6 : 1 }}>
                 <div>
-                  <div className="small" style={{ fontWeight: 800 }}>{d.name} <span className="tiny muted">· {BANK_META[d.bank].label}</span></div>
-                  <div className="tiny muted">{d.date} · {d.range ? `${d.range[0]}–${d.range[1]} ₾ · სეზონური` : `6-ჯერ ვნახეთ, ყოველ 29–31 დღეში`}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>{d.name}</div>
+                  <div className="tiny muted">{d.date} · {BANK_META[d.bank].label} · {d.range ? `თანხა იცვლება: ${d.range[0]}–${d.range[1]} ₾` : 'ყოველთვე, ბოლო 6 თვე'}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800 }}>{d.range ? '~' : ''}{gel(amt)}</div>
-                  {done ? <span className="tiny muted">გადახდილია ✓</span> : confirmed.includes(d.name) ? <span className="tiny" style={{ color: 'var(--good)', fontWeight: 700 }}>დადასტურდა ✓</span> : (
-                    <button className="tiny" style={{ color: 'var(--sky)', fontWeight: 800 }} onClick={() => reward('confirm', d.name)}>სწორია?</button>
+                  <div style={{ fontWeight: 800, fontSize: 15 }}>{d.range ? '~' : ''}{gel(amt)}</div>
+                  {done ? <span className="tiny muted">გადახდილია</span> : confirmed.includes(d.name) ? <span className="tiny" style={{ color: 'var(--good)', fontWeight: 700 }}>დადასტურდა ✓</span> : (
+                    <button className="tiny" style={{ color: 'var(--sky)', fontWeight: 800 }} onClick={() => reward('confirm', d.name)}>სწორია? დაადასტურე</button>
                   )}
                 </div>
               </div>
             )
           })}
         </div>
-        <div className="tiny muted" style={{ marginTop: 8 }}>ყოველი დადასტურება ამინდის სადგურს აუმჯობესებს და დიაპაზონს ავიწროებს.</div>
-      </div>
+      </Insight>
     </>
   )
 }
 
 /** monthly net (what one pay cycle adds or eats), so winter deficits are visible instead of hidden by the running balance */
-function YearBars({ rows, cushion, start }: { rows: CycleRow[]; cushion: number; start: number }) {
+function YearBars({ rows, start }: { rows: CycleRow[]; start: number }) {
   const nets = rows.map((r, i) => r.p50 - (i ? rows[i - 1].p50 : start))
-  const W = 340, H = 200, L = 34, B = 24, T = 18
-  const lo = Math.min(0, ...nets) - 20, hi = Math.max(0, ...nets) + 25
+  const W = 340, H = 210, L = 6, B = 26, T = 28
+  const lo = Math.min(0, ...nets) - 25, hi = Math.max(0, ...nets) + 30
   const y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B)
-  const bw = (W - L - 6) / rows.length
+  const bw = (W - L * 2) / rows.length
   const col = (v: number) => (v < 0 ? '#d9534f' : v < 60 ? '#f0b429' : '#58b368')
+  const winterIdx = rows.map((r, i) => (r.uplift >= 80 ? i : -1)).filter(i => i >= 0)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%">
-      {[lo + 20, 0, hi - 25].map(t => Math.round(t / 50) * 50).filter((t, i, a) => a.indexOf(t) === i).map(t => (
-        <g key={t}>
-          <line x1={L} x2={W} y1={y(t)} y2={y(t)} stroke={t === 0 ? '#c9bfae' : '#efe8dc'} />
-          <text x={L - 5} y={y(t) + 3} fontSize="9" textAnchor="end" fill="#8193a5">{t}</text>
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ overflow: 'visible' }}>
+      {winterIdx.length > 0 && (
+        <g>
+          <rect x={L + winterIdx[0] * bw} y={6} width={bw * winterIdx.length} height={H - B - 2} fill="#e8f1fb" rx="8" />
+          <text x={L + winterIdx[0] * bw + (bw * winterIdx.length) / 2} y={19} fontSize="10" fontWeight="800" textAnchor="middle" fill="#3d86c6">ზამთარი</text>
         </g>
-      ))}
+      )}
+      <line x1={L} x2={W - L} y1={y(0)} y2={y(0)} stroke="#b9ad99" strokeWidth="1.2" />
       {rows.map((r, i) => {
         const v = nets[i]
-        const x = L + i * bw + 3
-        const top = Math.min(y(v), y(0)), h = Math.max(1, Math.abs(y(v) - y(0)))
-        const winter = r.uplift >= 80
-        const short = r.p50 < cushion
+        const x = L + i * bw + 4
+        const top = Math.min(y(v), y(0)), h = Math.max(2, Math.abs(y(v) - y(0)))
         return (
           <g key={r.cycleEnd}>
-            {winter && <rect x={x - 2} y={T - 6} width={bw - 2} height={H - T - B + 6} fill="#e8f1fb" rx="4" />}
-            <motion.rect x={x} width={bw - 6} rx="3" fill={col(v)} initial={{ height: 0, y: y(0) }} animate={{ height: h, y: top }} transition={{ delay: i * 0.04, duration: 0.5 }} />
-            <text x={x + bw / 2 - 3} y={v < 0 ? top + h + 10 : top - 4} fontSize="8" fontWeight="700" textAnchor="middle" fill={v < 0 ? '#b4413b' : '#4a5b6d'}>{Math.round(v)}</text>
-            {short && <text x={x + bw / 2 - 3} y={T - 8 + 6} fontSize="9" textAnchor="middle">⚠️</text>}
-            <text x={x + bw / 2 - 3} y={H - 8} fontSize="8.5" textAnchor="middle" fill="#8193a5">{r.label.split(' ')[1]}</text>
+            <motion.rect x={x} width={bw - 8} rx="5" fill={col(v)} initial={{ height: 0, y: y(0) }} animate={{ height: h, y: top }} transition={{ delay: i * 0.04, duration: 0.5 }} />
+            <text x={x + (bw - 8) / 2} y={v < 0 ? top + h + 12 : top - 5} fontSize="9.5" fontWeight="800" textAnchor="middle" fill={v < 0 ? '#b4413b' : '#4a5b6d'}>{v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(Math.round(v))}</text>
+            <text x={x + (bw - 8) / 2} y={H - 8} fontSize="10" textAnchor="middle" fill="#6b7d8f">{r.label.split(' ')[1]}</text>
           </g>
         )
       })}
@@ -136,38 +158,41 @@ function YearBars({ rows, cushion, start }: { rows: CycleRow[]; cushion: number;
 
 function Year() {
   const v = useToday()
-  const { e, p } = v
+  const { e } = v
   const [pledge, setPledge] = useState(false)
   const [delivery, setDelivery] = useState(false)
-  const delta = (pledge ? 100 : 0) - (delivery ? Math.round(e.monthlyVarMedian * 0.034) : 0)
+  const deliveryCut = Math.round(e.monthlyVarMedian * 0.034)
+  const delta = (pledge ? 100 : 0) - (delivery ? deliveryCut : 0)
   const rows = useMemo(() => (delta === 0 ? e.baseline : e.installment({ price: 0, months: 1, ratePerMonth: 0, pledge: delta }).rows.slice(0, 12)), [e, delta])
+  const nets = rows.map((r, i) => r.p50 - (i ? rows[i - 1].p50 : e.landing.p50))
+  const worstI = nets.reduce((bi, n, i) => (n < nets[bi] ? i : bi), 0)
+  const worst = Math.round(nets[worstI])
   const short = rows.filter(r => r.p50 < e.cushion)
+  const worstMonth = KA_MONTHS_FULL[rows[worstI].m] // same month as the bar label
+  const stem = worstMonth.endsWith('ი') ? worstMonth.slice(0, -1) : worstMonth
   return (
     <>
-      <div className="card">
-        <div className="h3">რამდენი რჩება ყოველ თვეს</div>
-        <div className="small muted" style={{ margin: '4px 0 8px' }}>ხელფასიდან ხელფასამდე, ყველაზე სავარაუდო. ცისფერი ფონი — ზამთარი, ⚠️ — ხელფასამდე ზღვარს ქვემოთ.</div>
-        <YearBars rows={rows} cushion={e.cushion} start={e.landing.p50} />
-        <div className="small" style={{ marginTop: 6, fontWeight: 700, color: short.length ? '#b4413b' : 'var(--good)' }}>
-          {short.length ? `${short.length} თვე ზღვარს ქვემოთ: ${short.map(s => s.label.split(' ')[1]).join(', ')}` : 'ყველა თვე ზღვარს ზემოთ'}
+      <Insight
+        kicker="მთელი წელი"
+        title={worst < 0 ? <>ყველაზე რთული თვე <span style={{ color: '#b4413b' }}>{worstMonth}ა: {fmt(worst)} ₾</span></> : <>ყოველ თვეს რაღაც რჩება. ყველაზე ცოტა — {stem}ში</>}
+        legend={<>სვეტი აჩვენებს, რამდენი რჩება ერთი ხელფასიდან მეორემდე. მწვანე — კარგად რჩება, ყვითელი — ცოტა, წითელი — თვე მინუსშია. {short.length ? `ზღვარს ქვემოთ ჩადიხარ: ${short.map(s => s.label.split(' ')[1]).join(', ')}.` : ''} ეს ვარაუდია: ბოლო თვეების ხარჯს და შარშანდელ ზამთარს ვიმეორებთ.</>}
+      >
+        <YearBars rows={rows} start={e.landing.p50} />
+      </Insight>
+      <Insight kicker="რა მოხდება, თუ…" title="სცადე და ნახე, როგორ შეიცვლება წელი">
+        <div style={{ display: 'grid', gap: 8 }}>
+          <Toggle on={pledge} set={setPledge} title="ყოველ ხელფასზე 100 ₾ გადავდებ" sub="დანაზოგში, ხელფასის დღესვე" />
+          <Toggle on={delivery} set={setDelivery} title="მიწოდებასა და კაფეზე 20%-ით ნაკლებს დავხარჯავ" sub={`თვეში დაახლოებით ${gel(deliveryCut)}`} />
         </div>
-        <div className="tiny muted">ექსტრაპოლაციაა: ვვარაუდობ, რომ შენი ბოლო {p.historyMonths} თვე მეორდება, ზამთარში — შარშანდელი დანამატით.</div>
-      </div>
-      <div className="card">
-        <div className="h3">რა მოხდება, თუ…</div>
-        <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
-          <Toggle on={pledge} set={setPledge} title="100 ₾ ყოველ ხელფასზე ქვევრში" sub="დაპირება, რომელიც ხელფასის დღეს სრულდება" />
-          <Toggle on={delivery} set={setDelivery} title="მიწოდება და კაფე −20%" sub={`~${gel(Math.round(e.monthlyVarMedian * 0.034))} თვეში`} />
-        </div>
-        {pledge && short.length > 0 && <div className="small" style={{ marginTop: 10, background: '#fff4dc', borderRadius: 10, padding: '8px 10px' }}>ℹ️ დაპირებით ზამთარში ზღვარს ქვემოთ ხვდები. ინფორმაციისთვის: ბევრი დეკემბერ-მარტში დაპირებას აჩერებს.</div>}
-      </div>
+        {pledge && short.length > 0 && <div className="small" style={{ marginTop: 10, background: '#fff4dc', borderRadius: 12, padding: '10px 12px' }}>ზამთარში, 100 ₾-ის გადადებით, ზღვარს ქვემოთ ჩადიხარ. ბევრი ადამიანი დეკემბრიდან მარტამდე გადადებას ამცირებს.</div>}
+      </Insight>
     </>
   )
 }
 
 function Toggle({ on, set, title, sub }: { on: boolean; set: (v: boolean) => void; title: string; sub: string }) {
   return (
-    <button onClick={() => set(!on)} className="between" style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 14, background: on ? '#eaf4fd' : '#fbf8f2' }}>
+    <button onClick={() => set(!on)} className="between" style={{ textAlign: 'left', padding: '12px', borderRadius: 14, background: on ? '#eaf4fd' : '#fbf8f2' }}>
       <div><div className="small" style={{ fontWeight: 800 }}>{title}</div><div className="tiny muted">{sub}</div></div>
       <span style={{ width: 46, height: 26, borderRadius: 13, background: on ? '#1f3b57' : '#d9d0c2', position: 'relative', flexShrink: 0 }}>
         <motion.span animate={{ x: on ? 20 : 0 }} style={{ position: 'absolute', top: 3, left: 3, width: 20, height: 20, borderRadius: 10, background: '#fff' }} />
@@ -176,19 +201,19 @@ function Toggle({ on, set, title, sub }: { on: boolean; set: (v: boolean) => voi
   )
 }
 
-const CATS: { name: string; icon: string; share: number; merchants: [string, number][] }[] = [
-  { name: 'საკვები', icon: '🛒', share: 0.42, merchants: [['ნიკორა', 0.45], ['ორი ნაბიჯი', 0.3], ['ფრესკო', 0.25]] },
-  { name: 'მიწოდება და კაფე', icon: '🍕', share: 0.17, merchants: [['Wolt', 0.55], ['Glovo', 0.3], ['კაფე', 0.15]] },
-  { name: 'ტრანსპორტი', icon: '🚌', share: 0.13, merchants: [['Bolt', 0.6], ['მეტრო / ავტობუსი', 0.4]] },
-  { name: 'აფთიაქი', icon: '💊', share: 0.06, merchants: [['PSP', 0.6], ['ავერსი', 0.4]] },
-  { name: 'სხვა', icon: '🧺', share: 0.22, merchants: [['ტანსაცმელი', 0.4], ['საჩუქრები', 0.3], ['ნაღდი (ბანკომატი)', 0.3]] },
+const CATS: { name: string; icon: string; share: number; color: string; merchants: [string, number][] }[] = [
+  { name: 'საკვები', icon: '🛒', share: 0.42, color: '#1f3b57', merchants: [['ნიკორა', 0.45], ['ორი ნაბიჯი', 0.3], ['ფრესკო', 0.25]] },
+  { name: 'მიწოდება და კაფე', icon: '🍕', share: 0.17, color: '#5aa9e6', merchants: [['Wolt', 0.55], ['Glovo', 0.3], ['კაფე', 0.15]] },
+  { name: 'ტრანსპორტი', icon: '🚌', share: 0.13, color: '#7a5af8', merchants: [['Bolt', 0.6], ['მეტრო და ავტობუსი', 0.4]] },
+  { name: 'აფთიაქი', icon: '💊', share: 0.06, color: '#ff7a59', merchants: [['PSP', 0.6], ['ავერსი', 0.4]] },
+  { name: 'სხვა', icon: '🧺', share: 0.22, color: '#9fb4c7', merchants: [['ტანსაცმელი', 0.4], ['საჩუქრები', 0.3], ['ნაღდი ფული', 0.3]] },
 ]
 
 function weekdayProfile(e: Engine) {
   const sp = e.p.spend
   const oneoff = sp.oneoffP * sp.oneoffMedian * Math.exp(sp.oneoffSigma ** 2 / 2)
   const wd = sp.weekdayMean + oneoff, we = sp.weekendMean + oneoff
-  return ['ორ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ', 'კვი'].map((d, i) => ({ d, v: (i >= 5 ? we : wd) * (1 + ((i * 7) % 5 - 2) * 0.03) }))
+  return ['ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ', 'კვი'].map((d, i) => ({ d, v: (i >= 5 ? we : wd) * (1 + ((i * 7) % 5 - 2) * 0.03) }))
 }
 
 function Spend() {
@@ -197,47 +222,44 @@ function Spend() {
   const total = e.monthlyVarMedian
   const wk = weekdayProfile(e)
   const maxWk = Math.max(...wk.map(x => x.v))
+  const weekendMore = Math.round(((wk[5].v + wk[6].v) / 2 / ((wk[0].v + wk[1].v + wk[2].v + wk[3].v + wk[4].v) / 5) - 1) * 100)
+  const top = CATS[0]
   return (
     <>
-      <div className="card">
-        <div className="between"><div className="h3">ცვლადი ხარჯი თვეში</div><b>~{gel(total)}</b></div>
-        <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      <Insight kicker="ყოველდღიური ხარჯი" title={<>ყველაზე მეტს <span style={{ color: 'var(--navy)' }}>{top.name.endsWith('ი') ? top.name.slice(0, -1) : top.name}ზე</span> ხარჯავ: ~{gel(Math.round((total * top.share) / 5) * 5)} თვეში</>} legend={`სულ ყოველდღიურ ხარჯზე თვეში დაახლოებით ${gel(total)} მიდის.`}>
+        <div style={{ display: 'grid', gap: 12 }}>
           {CATS.map((c, i) => (
             <div key={c.name}>
-              <div className="between small"><span>{c.icon} {c.name}</span><b>~{gel(Math.round((total * c.share) / 5) * 5)}</b></div>
-              <div style={{ height: 8, borderRadius: 5, background: '#efe8dc', marginTop: 4, overflow: 'hidden' }}>
-                <motion.div initial={{ width: 0 }} animate={{ width: `${c.share * 100 / 0.42}%` }} transition={{ delay: i * 0.08 }} style={{ height: '100%', background: ['#1f3b57', '#5aa9e6', '#7a5af8', '#ff7a59', '#9fb4c7'][i], borderRadius: 5 }} />
+              <div className="between small"><span style={{ fontWeight: 700 }}>{c.icon} {c.name}</span><b>~{gel(Math.round((total * c.share) / 5) * 5)}</b></div>
+              <div style={{ height: 10, borderRadius: 6, background: '#efe8dc', marginTop: 5, overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${(c.share / CATS[0].share) * 100}%` }} transition={{ delay: i * 0.08 }} style={{ height: '100%', background: c.color, borderRadius: 6 }} />
               </div>
-              <div className="tiny muted" style={{ marginTop: 3 }}>{c.merchants.map(([m, s]) => `${m} ${fmt(Math.round(total * c.share * s))} ₾`).join(' · ')}</div>
+              <div className="tiny muted" style={{ marginTop: 4 }}>{c.merchants.map(([m, s]) => `${m} ${fmt(Math.round(total * c.share * s))} ₾`).join(' · ')}</div>
             </div>
           ))}
         </div>
-      </div>
-      <div className="card">
-        <div className="h3">კვირის დღეები</div>
-        <div className="small muted">საშუალო ხარჯი დღეში</div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 110, marginTop: 10 }}>
+      </Insight>
+      <Insight kicker="კვირის დღეები" title={<>შაბათ-კვირას <span style={{ color: '#d9603f' }}>{weekendMore}%-ით მეტს</span> ხარჯავ</>} legend="ამიტომ პროგნოზი ყოველ დღეს ცალ-ცალკე ითვლის: შაბათი ოთხშაბათს არ ჰგავს.">
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 120 }}>
           {wk.map((x, i) => (
             <div key={x.d} style={{ flex: 1, textAlign: 'center' }}>
-              <div className="tiny" style={{ fontWeight: 700 }}>{Math.round(x.v)}</div>
-              <motion.div initial={{ height: 0 }} animate={{ height: (x.v / maxWk) * 80 }} transition={{ delay: i * 0.05 }} style={{ background: i >= 5 ? '#ff7a59' : '#5aa9e6', borderRadius: 6 }} />
-              <div className="tiny muted">{x.d}</div>
+              <div className="tiny" style={{ fontWeight: 800 }}>{Math.round(x.v)} ₾</div>
+              <motion.div initial={{ height: 0 }} animate={{ height: (x.v / maxWk) * 82 }} transition={{ delay: i * 0.05 }} style={{ background: i >= 5 ? '#ff7a59' : '#5aa9e6', borderRadius: 8, marginTop: 3 }} />
+              <div className="tiny muted" style={{ marginTop: 4 }}>{x.d}</div>
             </div>
           ))}
         </div>
-        <div className="small" style={{ marginTop: 10, background: '#fff7e0', borderRadius: 10, padding: '8px 10px' }}>📘 შაბათ-კვირას ~{Math.round((wk[5].v / wk[0].v - 1) * 100)}%-ით მეტს ხარჯავ. ამიტომ პროგნოზი კვირის დღეებს ცალ-ცალკე ითვლის.</div>
-      </div>
-      <div className="card">
-        <div className="between"><div className="h3">ფიქსირებული ნაკადები</div><b>{gel(e.fixedTotal)}</b></div>
-        <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+      </Insight>
+      <Insight kicker="ფიქსირებული ხარჯი" title={<>ყოველთვე {gel(e.fixedTotal)} ავტომატურად მიდის</>} legend="ამ ჩამონათვალს ჯიხო შენი ამონაწერებიდან თავად პოულობს.">
+        <div style={{ display: 'grid', gap: 2 }}>
           {p.fixed.map(f => (
-            <div key={f.name} className="between small" style={{ padding: '6px 0', borderBottom: '1px dashed #eee5d8' }}>
-              <div><b>{f.name}</b><div className="tiny muted">ყოველი თვის {f.day} · {f.seen}-ჯერ ვნახეთ · {BANK_META[f.bank].label}</div></div>
+            <div key={f.name} className="between" style={{ padding: '8px 0', borderBottom: '1px dashed #eee5d8' }}>
+              <div><div style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</div><div className="tiny muted">ყოველი თვის {f.day} რიცხვში · {BANK_META[f.bank].label}</div></div>
               <b>{f.range ? '~' : ''}{gel(f.amount)}</b>
             </div>
           ))}
         </div>
-      </div>
+      </Insight>
     </>
   )
 }

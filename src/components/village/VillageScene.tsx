@@ -210,7 +210,7 @@ export function VillageScene({ game, stage, hardship, tips, onOpen }: Props) {
         <motion.button
           key={game.equipped.join('|')}
           onClick={pokeJikho}
-          aria-label="ჯიხო — შეეხე რჩევისთვის"
+          aria-label="ჯიხო — შეეხე მინიშნებისთვის"
           initial={{ scale: 0.85 }}
           animate={hop ? { scale: 1, y: [0, -14, 0] } : { scale: 1, y: 0 }}
           transition={hop ? { duration: 0.5 } : { type: 'spring', damping: 10 }}
