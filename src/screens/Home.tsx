@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL } from '../state/store'
+import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL, STREAK_GOAL, STREAK_BONUS } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { RoadScene } from '../components/RoadScene'
 import { Jikho, JikhoMood } from '../components/Jikho'
@@ -43,6 +43,7 @@ export function Home() {
   const [buyOpen, setBuyOpen] = useState(false)
   const [personaOpen, setPersonaOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [streakOpen, setStreakOpen] = useState(false)
   const [preview, setPreview] = useState<WeatherKind | null>(null)
   const stage = evolutionStage(game)
   const weather = preview ?? v.weather
@@ -87,7 +88,7 @@ export function Home() {
         </button>
         <div className="row" style={{ gap: 6 }}>
           {!gameOff && (
-            <span className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} title="სერია">{v.hardship ? '❄ გაყინულია' : `🏮 ${game.streak}`}</span>
+            <button className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} onClick={() => setStreakOpen(true)} title="სერია" aria-label="სერია">{v.hardship ? '❄ გაყინულია' : `🏮 ${game.streak}`}</button>
           )}
           {!gameOff && (
             <button className="chip" style={{ background: 'rgba(255,255,255,0.85)' }} onClick={() => { setTab('analytics'); useStore.getState().setAnalyticsSeg('points') }} title="ქულები და კუპონები" aria-label="ქულები და კუპონები">⭐ {game.points ?? 0} ქულა</button>
@@ -207,6 +208,7 @@ export function Home() {
       <PurchaseSheet open={buyOpen} onClose={() => { setBuyOpen(false); setPreview(null) }} onPreview={setPreview} />
       <PersonaSheet open={personaOpen} onClose={() => setPersonaOpen(false)} />
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
       <Ceremony />
     </div>
   )
@@ -320,6 +322,46 @@ export const RED_LINES = [
   'ბანკის ფლოუში თამაში და ჯილდო არ არსებობს',
   'სოციალურში მხოლოდ გაუმჯობესება, არასდროს ბალანსი',
 ]
+
+function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const v = useToday()
+  const game = useStore(s => s.games[v.p.id])
+  const setTab = useStore(s => s.setTab)
+  const n = game.streak
+  const lit = n > 0 && n % STREAK_GOAL === 0 ? STREAK_GOAL : n % STREAK_GOAL
+  const left = STREAK_GOAL - lit
+  return (
+    <Sheet open={open} onClose={onClose}>
+      {v.hardship ? (
+        <div style={{ display: 'grid', gap: 10, textAlign: 'center' }}>
+          <div style={{ fontSize: 44 }}>❄️</div>
+          <div className="display" style={{ fontSize: 22, fontWeight: 800 }}>სერია გაყინულია</div>
+          <div className="small" style={{ lineHeight: 1.5 }}>მხარდაჭერის რეჟიმში სერია არც იზრდება და არც იკარგება. გააგრძელებ, როცა მზად იქნები.</div>
+          <button className="pill-btn btn-primary" onClick={onClose}>კარგი</button>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 12, textAlign: 'center' }}>
+          <div style={{ fontSize: 44 }}>🏮</div>
+          <div className="display" style={{ fontSize: 24, fontWeight: 800 }}>{n} დღე ზედიზედ</div>
+          <div style={{ fontSize: 16 }}>{n > 0 ? 'ყოჩაღ, ასე გააგრძელე!' : 'დღეს დაიწყე ახალი სერია.'}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${STREAK_GOAL}, 1fr)`, gap: 4, padding: '4px 0' }}>
+            {Array.from({ length: STREAK_GOAL }, (_, i) => (
+              <motion.div key={i} initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: i * 0.03 }}
+                style={{ height: 14, borderRadius: 7, background: i < lit ? '#ffb02e' : '#ece6dc' }} />
+            ))}
+          </div>
+          <div className="small" style={{ fontWeight: 700 }}>
+            {left === 0 ? <>15 დღე შესრულდა: <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულა</b></> : <>კიდევ {left} დღე და მიიღებ <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულას</b></>}
+          </div>
+          <div className="tiny muted" style={{ lineHeight: 1.5 }}>სერია იზრდება, როცა დილის 3 კითხვას გაივლი.{game.freezes > 0 ? ` თუ დღე გამოგრჩა, ❄ ${game.freezes} დაცვის დღე სერიას შეინახავს.` : ''}</div>
+          {game.litToday
+            ? <div className="small" style={{ color: 'var(--good)', fontWeight: 700 }}>✓ დღეს უკვე ანთია</div>
+            : <button className="pill-btn btn-sun" onClick={() => { onClose(); setTab('day') }}>დილის 3 კითხვა</button>}
+        </div>
+      )}
+    </Sheet>
+  )
+}
 
 function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const gameOff = useStore(s => s.gameOff)

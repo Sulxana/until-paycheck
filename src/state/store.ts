@@ -30,6 +30,9 @@ export interface Game {
   pledged: boolean
 }
 export const CHECK_MAX = 6
+/** streak milestone: every STREAK_GOAL days in a row of morning lessons earns STREAK_BONUS points */
+export const STREAK_GOAL = 15
+export const STREAK_BONUS = 20
 const MASTERY: Record<PersonaId, Record<TopicId, number>> = {
   nino: { M1: 70, M2: 55, M3: 30, M4: 20, M5: 45, M6: 25, M7: 60, M8: 10, M9: 15 },
   luka: { M1: 35, M2: 25, M3: 15, M4: 10, M5: 30, M6: 10, M7: 40, M8: 5, M9: 5 },
@@ -138,7 +141,12 @@ export const useStore = create<Store>()(
         if (g.litToday) return null
         if (get().personaId === 'tamar') { patchGame(() => ({ litToday: true })); return null } // hardship: streak frozen, nothing lost
         patchGame(gg => ({ litToday: true, streak: gg.streak + 1 }))
-        return g.streak + 1
+        const n = g.streak + 1
+        if (n % STREAK_GOAL === 0) {
+          const pt = earn(STREAK_BONUS, `სერია: ${n} დღე ზედიზედ`)
+          if (pt) setTimeout(() => get().toast('🏮', `${n} დღე ზედიზედ!${pt}`), 900)
+        }
+        return n
       }
       return {
         personaId: 'nino',
