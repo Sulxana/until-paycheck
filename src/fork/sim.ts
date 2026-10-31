@@ -166,7 +166,7 @@ function randomDeck(rng: PyRandom, days: DayInfo[]): { card: ForkCard; day: numb
   }
   return out as { card: ForkCard; day: number }[]
 }
-const tight = (c: ForkCard) => (['blackfriday', 'giorgoba'].includes(c.id) ? 0 : ['bar', 'trip', 'mom', 'cleaning', 'wedding'].includes(c.id) ? 1 : 2)
+const tight = (c: ForkCard) => (['blackfriday', 'giorgoba'].includes(c.id) ? 0 : ['bar', 'karaoke', 'trip', 'mom', 'cleaning', 'wedding'].includes(c.id) ? 1 : 2)
 
 function randomGaps(rng: PyRandom, n: number, rentAfter: number): string[] {
   for (let tries = 0; tries < 200; tries++) {
@@ -297,7 +297,7 @@ export function buildMonth(seed = DEFAULT_SEED, calm = false): Month {
 }
 
 // ---------------- one run ----------------
-export interface Sched { day: number; p: number; e: string; t: string; en: number; kind: 'later' | 'back'; was?: string; done?: boolean }
+export interface Sched { day: number; p: number; e: string; t: string; en: number; kind: 'later' | 'back'; was?: string; fact?: string; done?: boolean }
 export interface Run {
   x: number
   /** last day boundary processed (−1 before day 0) */
@@ -426,7 +426,7 @@ export function chooseFork(m: Month, r: Run, i: number, side: 0 | 1): Fx[] {
   const lend = !!o.back && o.backDay >= N_DAYS
   r.picks.push({ i, e: o.e, t: o.t, p: paid, back: lend })
   if (lend) r.lent += paid
-  if (o.later && o.laterDay < N_DAYS) r.sched.push({ day: o.laterDay, p: o.later.p, e: o.later.e, t: o.later.t, en: o.later.en, kind: 'later', was: o.later.was })
+  if (o.later && o.laterDay < N_DAYS) r.sched.push({ day: o.laterDay, p: o.later.p, e: o.later.e, t: o.later.t, en: o.later.en, kind: 'later', was: o.later.was, fact: o.later.fact })
   if (o.back && o.backDay < N_DAYS) r.sched.push({ day: o.backDay, p: -o.back.p, e: o.back.e, t: o.back.t, en: 0, kind: 'back' })
   const tail: Fx[] = []
   addEnergy(r, o.en, tail)
@@ -466,6 +466,82 @@ export function catchJoy(m: Month, r: Run, i: number): Fx[] {
   return fx
 }
 export function missJoy(r: Run, i: number) { if (!r.item[i]) { r.item[i] = 'missed'; r.combo = 0 } }
+
+// ---------------- facts ----------------
+/** a fork's fact shows after the choice only if at least FACT_GAP forks have passed since the last fact shown, and
+ * never at the first FACT_FROM forks (they carry the how-to-play hints): about every 2nd–3rd fork */
+export const FACT_GAP = 2
+export const FACT_FROM = 2
+/** how long a fact may wait (for a scam to pass, or for the notices to clear) before it is dropped */
+export const FACT_WAIT_MS = 2500
+/** how long a fact stays on screen: by its length, 2.2–3 s */
+export const factMs = (t: string) => Math.max(2200, Math.min(3000, 1400 + 22 * [...t].length))
+/** a scam is announced in the banner from this far ahead until it is 20 px behind Jikho */
+export const BANNER_AHEAD = 460
+/** how long each notice stays on screen (ForkGame's toasts; the fact timing below counts them) */
+export const NOTE_MS = { salary: 3200, rent: 4600, bill: 4200, later: 3800, back: 3000, surprise: 3600, work: 3400, rest: 2600, fatigue: 4200, low: 3200, locked: 2400, scam: 4200 }
+
+/** keeps a number and its ₾ on one line */
+export const keepTogether = (t: string) => t.replace(/(\d) ₾/g, '$1\u00a0₾')
+
+/** the fact fork i may show right after its choice, given the index of the last fork whose fact was shown */
+export function forkFact(m: Month, i: number, lastShown: number): string | null {
+  const t = m.forks[i]?.card.fact
+  return t && i >= FACT_FROM && i - lastShown >= FACT_GAP ? t : null
+}
+
+/** how far ahead the next unresolved scam is (it counts until it is 20 px behind Jikho); Infinity when none */
+export function scamAhead(m: Month, r: Run, x: number): number {
+  for (let i = 0; i < m.items.length; i++) { const it = m.items[i]; if (it.kind === 'scam' && !r.item[i] && it.x > x - 20) return it.x - x }
+  return Infinity
+}
+
+// Under a scam banner a fact and a notice never show together (on a small phone the three would reach down to Jikho):
+// a notice that comes then waits behind the fact, unless it would be seen for less than NOTE_SEEN_MS after it (then the
+// fact goes); a banner that comes while a fact and a notice are up sends the fact away; a scam hit always does.
+export const NOTE_SEEN_MS = 1500
+
+/** px to the next day boundary that brings a notice (ForkGame's toasts: the first bill, the rent, an unexpected cost, a
+ * later cost or a return, the first working day and the first day of rest); Infinity when none within `within` px */
+export function noticeAhead(m: Month, r: Run, x: number, told: { work: boolean; rest: boolean }, within = 900): number {
+  const rentBill = m.bills.find(b => b.rent)
+  for (let d = Math.max(0, r.day + 1); d < N_DAYS && m.dayX[d] - x < within; d++) {
+    const has = m.bills.some(b => b.day === d && (b === rentBill || b === m.bills[0])) || m.surprises.some(su => su.day === d) ||
+      r.sched.some(sc => !sc.done && sc.day === d) || (!told.work && m.dayEn[d] < 0) || (!told.rest && m.dayEn[d] > 0)
+    if (has) return m.dayX[d] - x
+  }
+  return Infinity
+}
+
+/** a waiting fact may show now: no scam announced, no scam rule on screen, at most one notice next to it, and if a scam
+ * will be announced while the fact is up, no notice on screen by then (`left`: ms left of each notice now on screen,
+ * `noticeDist`: px to the next notice that a day brings). `share` = the screen has room for a scam banner and a fact
+ * above Jikho (not on a small phone: there a fact never shares the screen with a scam banner). */
+export function factMayShow(left: number[], scamDist: number, noticeDist: number, ruleUp: boolean, ms: number, share = true): boolean {
+  if (ruleUp || scamDist < BANNER_AHEAD || left.length > 1) return false
+  const bannerPx = scamDist - BANNER_AHEAD
+  if (bannerPx >= (SPEED * ms) / 1000) return true
+  return share && noticeDist >= bannerPx && left.every(l => l <= (bannerPx / SPEED) * 1000)
+}
+/** room (px) between the top of the notices and Jikho's head that a two-line scam banner and a two-line fact need */
+export const SHARE_ROOM = 124
+
+/** a fact the player saw on the way; w = how much it touched this month (a scam hit or a later cost: 3, a fact after
+ * taking the pricier sign: 2, any other: 1), p = the money involved */
+export interface SeenFact { t: string; w: number; p: number }
+export const pricier = (f: ForkInst, side: 0 | 1) => f.opts[side].p > f.opts[1 - side].p
+
+/** up to three facts for the end card: the ones seen that touched the month most, then the facts of the forks where the
+ * pricier sign was taken (the biggest spend first), then the month's other fork facts in road order */
+export function endFacts(m: Month, r: Run, seen: SeenFact[]): string[] {
+  const out: string[] = []
+  const add = (t?: string | null) => { if (t && out.length < 3 && !out.includes(t)) out.push(t) }
+  seen.map((s, k) => ({ ...s, k })).sort((a, b) => b.w - a.w || b.p - a.p || a.k - b.k).forEach(s => add(s.t))
+  m.forks.filter(f => r.choice[f.i] !== undefined && pricier(f, r.choice[f.i]!))
+    .sort((a, b) => b.opts[r.choice[b.i]!].p - a.opts[r.choice[a.i]!].p).forEach(f => add(f.card.fact))
+  m.forks.filter(f => r.choice[f.i] !== undefined).forEach(f => add(f.card.fact))
+  return out
+}
 
 // ---------------- forecast ----------------
 export interface Fc { p50: number; pBelow: number; weather: WeatherKind }
@@ -584,18 +660,52 @@ export const botBalanced: Policy = (m, r, f) => {
   return o.sort((a, b) => b.e - a.e || b.p50 - a.p50)[0].side
 }
 
-export interface Timed { r: Run; secs: number; stops: number; spins: number; flips: number }
+/** the facts of a timed run, the way the screen shows them: shown (in order), dropped (waited too long), cut (sent away
+ * early: a scam hit, or a notice under a scam banner); ruleS = seconds a fact was up while a scam rule was (stays 0),
+ * bannerS = seconds it shared the screen with a scam banner (no notice is shown then) */
+export interface FactLog { shown: string[]; dropped: number; cut: number; ruleS: number; bannerS: number }
+export interface Timed { r: Run; secs: number; stops: number; spins: number; flips: number; facts: FactLog }
 /** plays the month frame by frame the way the screen does: each fork is chosen `react` s after its pads show,
- * every scam is jumped and every joy caught with good timing (take-off half an airtime before the item) */
-export function playTimed(m: Month, policy: Policy, react: number): Timed {
+ * every scam is jumped (except a share `hitP` of them, drawn from `hitSeed`) and every joy caught with good timing
+ * (take-off half an airtime before the item). Notices and facts follow ForkGame's rules (toast(), showFact()). */
+export function playTimed(m: Month, policy: Policy, react: number, hitP = 0, hitSeed = 1, share = true): Timed {
   const r = newRun(m)
   advanceTo(m, r, 0)
   const mv: Mover = { x: 0, v: 0 }
   const dt = 1 / 60
   let t = 0, hold = 0, activeAt = -1, stops = 0, was = false, spins = 0, flips = 0, pend = 0
   let jumpY = 0, jumpV = 0, air = false
+  let rs = hitSeed
+  const willHit = m.items.map(() => { rs = (rs * 16807) % 2147483647; return rs / 2147483647 < hitP })
+  // notices (their end times) and facts
+  const notes: number[] = []
+  const left = () => notes.filter(e => e > t).map(e => (e - t) * 1000)
+  const live = () => left().length
+  const once = { work: false, rest: false, low: false }
+  const rentBill = m.bills.find(b => b.rent)
+  const facts: FactLog = { shown: [], dropped: 0, cut: 0, ruleS: 0, bannerS: 0 }
+  let factLast = -99, factEnd = -1, ruleUntil = -1, bannerWas = false
+  let factWait: { t: string; i: number; until: number } | null = null
+  const note = (ms: number) => {
+    notes.push(t + ms / 1000)
+    if (t < factEnd && scamAhead(m, r, mv.x) < BANNER_AHEAD && ms - (factEnd - t) * 1000 < NOTE_SEEN_MS) { facts.cut++; factEnd = -1 }
+  }
+  note(NOTE_MS.salary)
   const jump = () => { if (!air) { air = true; jumpV = JUMP_V } }
-  const tired = (fx: Fx[]) => { for (const e of fx) if (e.k === 'fatigue') hold = t + FATIGUE_PAUSE }
+  const tired = (fx: Fx[]) => {
+    for (const e of fx) {
+      if (e.k === 'fatigue') { hold = t + FATIGUE_PAUSE; note(NOTE_MS.fatigue) }
+      else if (e.k === 'bill') { if (e.bill === rentBill) note(NOTE_MS.rent); else if (e.nth === 0) note(NOTE_MS.bill) }
+      else if (e.k === 'later') note(NOTE_MS.later)
+      else if (e.k === 'back') note(NOTE_MS.back)
+      else if (e.k === 'surprise') note(NOTE_MS.surprise)
+      else if (e.k === 'dayEn') {
+        if (e.delta < 0 && !once.work) { once.work = true; note(NOTE_MS.work) }
+        if (e.delta > 0 && !once.rest) { once.rest = true; note(NOTE_MS.rest) }
+      }
+    }
+    if (fx.length && !once.low && r.energy <= 2) { once.low = true; note(NOTE_MS.low) }
+  }
   while (!over(r) && t < 600) {
     t += dt
     while (pend < m.forks.length && r.choice[pend] !== undefined) pend++
@@ -609,6 +719,8 @@ export function playTimed(m: Month, policy: Policy, react: number): Timed {
         const c = fx[0]
         if (c && c.k === 'choose' && c.balanced && c.combo % 3 === 0) { if (COMBO_MOVE === 'flip') { flips++; jump() } else spins++ }
         tired(fx)
+        const ft = forkFact(m, f.i, factLast)
+        if (ft) { if (factWait) facts.dropped++; factWait = { t: ft, i: f.i, until: t + FACT_WAIT_MS / 1000 } }
         activeAt = -1
         while (pend < m.forks.length && r.choice[pend] !== undefined) pend++
       }
@@ -618,16 +730,33 @@ export function playTimed(m: Month, policy: Policy, react: number): Timed {
     was = st
     tired(advanceTo(m, r, mv.x))
     if (over(r)) break
+    if (factWait) {
+      const ms = factMs(factWait.t)
+      if (factMayShow(left(), scamAhead(m, r, mv.x), noticeAhead(m, r, mv.x, once), t < ruleUntil, ms, share)) { facts.shown.push(factWait.t); factLast = factWait.i; factEnd = t + ms / 1000; factWait = null }
+      else if (t > factWait.until) { facts.dropped++; factWait = null }
+    }
     for (let i = 0; i < m.items.length; i++) {
       const c = contactOf(m, r, i, mv.x, jumpY)
-      if (c === 'hit') hitScam(m, r, i)
+      if (c === 'hit') {
+        hitScam(m, r, i)
+        // the scam's rule takes the screen: a fact that waits is dropped, one on screen goes
+        if (factWait) { facts.dropped++; factWait = null }
+        if (t < factEnd) { facts.cut++; factEnd = -1 }
+        note(NOTE_MS.scam)
+        ruleUntil = t + NOTE_MS.scam / 1000
+      }
       else if (c === 'dodge') dodgeScam(m, r, i)
       else if (c === 'catch') tired(catchJoy(m, r, i))
       else if (c === 'miss') missJoy(r, i)
     }
+    const banner = scamAhead(m, r, mv.x) < BANNER_AHEAD
+    if (banner && !bannerWas && t < factEnd && (!share || live() > 0)) { facts.cut++; factEnd = -1 }
+    bannerWas = banner
+    if (t < factEnd && t < ruleUntil) facts.ruleS += dt
+    if (t < factEnd && banner) facts.bannerS += dt
     const k = m.items.findIndex((it, i) => !r.item[i] && it.x > mv.x - 40)
-    if (k >= 0 && !air) { const ahead = m.items[k].x - mv.x; if (mv.v > 1 && ahead > 0 && ahead / mv.v <= AIR_T / 2) jump() }
+    if (k >= 0 && !air && !(m.items[k].kind === 'scam' && willHit[k])) { const ahead = m.items[k].x - mv.x; if (mv.v > 1 && ahead > 0 && ahead / mv.v <= AIR_T / 2) jump() }
     if (air) { jumpV -= GRAV * dt; jumpY += jumpV * dt; if (jumpY <= 0) { jumpY = 0; air = false } }
   }
-  return { r, secs: t, stops, spins, flips }
+  return { r, secs: t, stops, spins, flips, facts }
 }

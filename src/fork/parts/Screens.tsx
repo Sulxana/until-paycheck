@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { fmt } from '../../engine/view'
 import { Jikho, Accessory } from '../../components/Jikho'
-import { Month, Run, Ending } from '../sim'
+import { Month, Run, Ending, keepTogether } from '../sim'
 import { Best, SeedRec } from '../best'
 
 const times = (n: number) => (n === 1 ? 'ერთხელ' : `${n}-ჯერ`)
@@ -40,12 +40,14 @@ interface EndProps {
   note: string | null
   stage: 0 | 1 | 2 | 3
   accessories: Accessory[]
+  /** up to three true facts from this month (the ones met on the way first) */
+  facts: string[]
   onReplay: () => void
   onNew: () => void
   onExit: () => void
 }
 
-export function EndCard({ m, r, kind, prev, note, stage, accessories, onReplay, onNew, onExit }: EndProps) {
+export function EndCard({ m, r, kind, prev, note, stage, accessories, facts: known, onReplay, onNew, onExit }: EndProps) {
   const land = Math.round(r.failed ? r.failed.money : r.money)
   const nScams = m.items.filter(i => i.kind === 'scam').length
   const title = kind === 'sun' ? 'წონასწორობა' : kind === 'cloud' ? 'ჩავედით' : 'გზა შეწყდა'
@@ -98,6 +100,12 @@ export function EndCard({ m, r, kind, prev, note, stage, accessories, onReplay, 
         <button className="f-go alt" onClick={onNew}>🗓️ ახალი თვე</button>
       </div>
       {lines.map(l => <p key={l} className="f-endline">{l}</p>)}
+      {known.length > 0 && (
+        <div className="f-know">
+          <span className="lbl">📌 ამ თვის {known.length > 1 ? `${known.length} ფაქტი` : 'ფაქტი'}</span>
+          {known.map(t => <p key={t}>{keepTogether(t)}</p>)}
+        </div>
+      )}
       <details className="f-more">
         <summary>თვის დეტალები</summary>
         <div className="f-facts">

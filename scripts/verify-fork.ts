@@ -1,12 +1,15 @@
 // Self-check for the forked-road runner "გზის გასაყარი": determinism, bots on the default month, run length (also
 // with a human reading delay, through the same motion model the screen uses), forecast sanity (bills barely move the
-// payday sky, a choice never raises it), the combo never landing Jikho on a scam, red-line words.
+// payday sky, a choice never raises it), the combo never landing Jikho on a scam, red-line words, the deck's own rules and
+// text limits, how many facts a played month really shows, and every amount in a fact against the prices it comes from.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   buildMonth, playBot, playTimed, botCheap, botPaid, botBalanced, endingOf, runSeconds, forecast, newRun, advanceTo, chooseFork, locked, wRank,
-  DEFAULT_SEED, COMBO_MOVE, Month, Run, Policy,
+  forkFact, endFacts, pricier, DEFAULT_SEED, COMBO_MOVE, FACT_GAP, Month, Run, Policy, SeenFact,
 } from '../src/fork/sim'
+import { FORKS, SCAMS, FATIGUE, SURPRISES, CURATED_SURPRISES, JOYS, ForkCard, forkById } from '../src/fork/deck'
+import { NINO } from '../src/engine/personas'
 
 let fails = 0
 const check = (name: string, ok: boolean, info = '') => { if (!ok) fails++; console.log(`${ok ? 'OK  ' : 'FAIL'} ${name}${info ? ': ' + info : ''}`) }
@@ -140,7 +143,7 @@ check('20–25 forks in the month', m.forks.length >= 20 && m.forks.length <= 25
   const files: string[] = []
   const walk = (d: string) => { for (const f of readdirSync(d)) { const pth = join(d, f); if (statSync(pth).isDirectory()) walk(pth); else if (/\.tsx?$/.test(f)) files.push(pth) } }
   walk(new URL('../src/fork', import.meta.url).pathname.replace(/^\/(\w:)/, '$1'))
-  const banned = [/უნდა/, /შეცდომ/, /ჭკვიან/, /ქულ/, /მონეტ/, /ქეშბექ/, /game over/i, /წააგე/, /დამოკიდებულ/, /რეიტინგ/, /ბონუს/, /განვადებ/, /კრედიტ/]
+  const banned = [/უნდა/, /შეცდომ/, /ჭკვიან/, /ქულ/, /მონეტ/, /ქეშბექ/, /game over/i, /წააგე/, /დამოკიდებულ/, /რეიტინგ/, /ბონუს/, /განვადებ/, /კრედიტ/, /გირჩევ/, /სჯობ/, /აჯობ/]
   const hits: string[] = []
   for (const f of files) readFileSync(f, 'utf8').split('\n').forEach((line, i) => {
     const text = (line.match(/'[^']*'|"[^"]*"|`[^`]*`|>[^<{]+</g) ?? []).join(' ')
@@ -148,9 +151,128 @@ check('20–25 forks in the month', m.forks.length >= 20 && m.forks.length <= 25
   })
   check('red-line words absent from runner text', hits.length === 0, hits.join('; '))
   // no fork option is a loan or an installment for the player
-  const { FORKS } = await import('../src/fork/deck')
   const credit = FORKS.flatMap(f => [f.a, f.b]).filter(o => /სესხ|განვად|კრედიტ/.test(o.t) && !/ვასესხებ/.test(o.t))
   check('no credit option at any fork', credit.length === 0, credit.map(o => o.t).join(', '))
+}
+
+// 5. the deck's own rules and text limits (pads, road signs and the fact bubble must not cut the text)
+{
+  const len = (t: string) => [...t].length
+  const over: string[] = []
+  const lim = (what: string, t: string | undefined, max: number) => { if (t !== undefined && len(t) > max) over.push(`${what} (${len(t)}>${max}): ${t}`) }
+  for (const f of FORKS) {
+    lim(`${f.id}.q`, f.q, 36)
+    for (const o of [f.a, f.b]) {
+      lim(`${f.id} label`, `${o.e} ${o.t}`, 24)
+      lim(`${f.id} later`, o.later?.t, 32)
+      lim(`${f.id} later fact`, o.later?.fact, 70)
+      lim(`${f.id} back`, o.back?.t, 50)
+    }
+    lim(`${f.id}.fact`, f.fact, 70)
+  }
+  for (const sc of SCAMS) { lim('scam sign', sc.sign, 36); lim('scam road', sc.short, 18); lim('scam hit', sc.hit, 44); lim('scam rule', sc.rule, 70) }
+  for (const x of [...FATIGUE, ...SURPRISES, ...CURATED_SURPRISES]) lim('fatigue/surprise', x.t, 34)
+  for (const j of JOYS) lim('joy', j.t, 22)
+  check('every question, label, fact and road text stays within its length limit', over.length === 0, over.join('; '))
+  const ids = FORKS.map(f => f.id)
+  check('fork ids are unique', new Set(ids).size === ids.length)
+  const sameIcon = FORKS.filter(f => f.a.e === f.b.e).map(f => f.id)
+  check('the two signs of a fork show different emoji (a road sign shows only the emoji and the price)', sameIcon.length === 0, sameIcon.join(', '))
+  const order = FORKS.filter(f => f.a.p < f.b.p || (f.cat !== 'energy' && f.a.p === f.b.p)).map(f => f.id)
+  check('option a is the pricier sign at every fork', order.length === 0, order.join(', '))
+  const joy = FORKS.filter(f => (f.cat === 'social' || f.cat === 'want') && f.a.en !== f.b.en).map(f => f.id)
+  const wants = FORKS.filter(f => f.cat === 'want' && (f.a.en || f.b.en)).map(f => f.id)
+  check('equal-joy rule: paid and free fun give the same ⚡, wants give none', joy.length + wants.length === 0, [...joy, ...wants].join(', '))
+  const chains = FORKS.filter(f => f.cat === 'chain' && !f.a.back && !(f.b.later && f.b.later.p > f.a.p)).map(f => f.id)
+  check('a chain\'s cheap sign costs more later than the paid one now', chains.length === 0, chains.join(', '))
+  check('every scam carries its rule (the fact shown after a hit)', SCAMS.every(sc => !!sc.rule))
+
+  // facts: about every 2nd–3rd fork (when every eligible fact shows), and up to three facts on the end card
+  const shown = (mm: Month) => { let last = -99, n = 0; for (const f of mm.forks) if (forkFact(mm, f.i, last)) { last = f.i; n++ } return n }
+  const n0 = shown(m)
+  check('facts show after about every 2nd–3rd fork of the default month', n0 >= Math.floor(m.forks.length / 3) && n0 <= Math.ceil(m.forks.length / FACT_GAP), `${n0} facts for ${m.forks.length} forks (at most one per ${FACT_GAP} forks)`)
+  const counts: number[] = []
+  for (let s = 1; s <= 40; s++) counts.push(shown(buildMonth(DEFAULT_SEED + s * 101)))
+  console.log(`     facts in other months: ${Math.min(...counts)}–${Math.max(...counts)} per month`)
+  let badEnd = ''
+  for (const [name, pol] of bots) {
+    const r = playBot(m, pol)
+    let last = -99
+    const seen: SeenFact[] = []
+    for (const f of m.forks) { const t = forkFact(m, f.i, last); if (t && r.choice[f.i] !== undefined) { last = f.i; seen.push({ t, w: pricier(f, r.choice[f.i]!) ? 2 : 1, p: pricier(f, r.choice[f.i]!) ? f.opts[r.choice[f.i]!].p : 0 }) } }
+    for (const sc of r.sched) if (sc.done && sc.fact) seen.push({ t: sc.fact, w: 3, p: sc.p })
+    const ef = endFacts(m, r, seen)
+    if (ef.length < 1 || ef.length > 3 || new Set(ef).size !== ef.length) badEnd += `${name}: ${ef.length}; `
+    console.log(`     end-card facts (${name}): ${ef.join(' | ')}`)
+  }
+  check('the end card shows one to three different facts', badEnd === '', badEnd)
+
+  // facts as a played month shows them: notices, scam banners and scam rules hold them back (sim.ts: factMayShow)
+  const factId = (t: string) => FORKS.find(f => f.fact === t)?.id ?? '?'
+  const tf = playTimed(m, botBalanced, 1.0)
+  check('facts that actually show in a played default month: about every 2nd–3rd fork', tf.facts.shown.length >= 7,
+    `${tf.facts.shown.length} of ${n0} eligible (${tf.facts.shown.map(factId).join(', ')}), ${tf.facts.dropped} dropped, ${tf.facts.cut} cut short, ${tf.facts.bannerS.toFixed(1)} s next to a scam banner`)
+  // a small phone (e.g. 375×667, 320×640): no room for a scam banner and a fact together, so fewer facts show
+  const tsm = playTimed(m, botBalanced, 1.0, 0, 1, false)
+  check('on a small phone a fact never shares the screen with a scam banner, and facts still show', tsm.facts.bannerS === 0 && tsm.facts.shown.length >= 5,
+    `${tsm.facts.shown.length} shown (${tsm.facts.shown.map(factId).join(', ')}), ${tsm.facts.dropped} dropped, ${tsm.facts.cut} cut short`)
+  let ruleS = 0, cutH = 0, shownH = 0
+  for (let s = 1; s <= 6; s++) { const th = playTimed(m, botBalanced, 1.0, 0.3, s); ruleS += th.facts.ruleS; cutH += th.facts.cut; shownH += th.facts.shown.length }
+  check('with a third of the scams hit, a fact never shares the screen with a scam rule', ruleS === 0, `6 runs: ${shownH} facts shown, ${cutH} cut short, ${ruleS.toFixed(1)} s next to a rule`)
+  const played: number[] = []
+  for (let s = 1; s <= 30; s++) played.push(playTimed(buildMonth(DEFAULT_SEED + s * 101), botBalanced, 1.0, 0.2, s).facts.shown.length)
+  console.log(`     facts shown in played other months: ${Math.min(...played)}–${Math.max(...played)} (avg ${(played.reduce((a, b) => a + b, 0) / played.length).toFixed(1)})`)
+  check('other played months show facts too', Math.min(...played) >= 4, `fewest ${Math.min(...played)}`)
+
+  // every amount in a fact comes from the prices it talks about, so a retune cannot quietly make a fact false
+  const nums = (t: string) => (t.match(/\d+(?:,\d+)?/g) ?? []).map(v => Number(v.replace(',', '.'))).sort((x, y) => x - y)
+  const rent = NINO.fixed.find(f => f.kind === 'rent')!.amount
+  const gymBill = NINO.fixed.find(f => f.kind === 'sport')!.amount
+  const decWeek = m.bills.filter(b => b.day >= 21 && b.day <= 27)
+  const src: Record<string, (f: ForkCard) => number[]> = {
+    bolt: f => [f.a.p, f.b.p, 20, (f.a.p - f.b.p) * 20],
+    dinner: f => [f.a.p, f.a.p * 30, rent],
+    lunch: f => [f.a.p, f.b.p, 20, (f.a.p - f.b.p) * 20],
+    groceries: f => [f.a.p, f.b.p, 4, (f.a.p - f.b.p) * 4],
+    night: f => [f.a.p, f.b.p, f.a.p / f.b.p],
+    marshrutka: f => [f.a.p, f.b.p, 5, (f.a.p - f.b.p) * 5],
+    nails: f => [f.a.p, f.b.p, (f.a.p - f.b.p) * 2],
+    dishes: f => [f.a.p, 4, f.a.p * 4],
+    cinema: f => [f.a.p, f.a.p * 4],
+    karaoke: f => [f.a.p, f.a.p * 4],
+    screen: f => [f.a.p, Math.floor(f.a.p / f.b.p), f.a.p - Math.floor(f.a.p / f.b.p) * f.b.p],
+    rain: f => [forkById('bolt').a.p, f.a.p],
+    bar: f => [f.a.p, f.a.p * 4],
+    blackfriday: f => [(f.a.p * 5) / 3, 40, (f.a.p * 5) / 3 - f.a.p, f.a.p],
+    temu: f => [Math.round(f.a.p / 12), 12, f.a.p],
+    coffee: f => [f.a.p, 20, f.a.p * 20],
+    series: f => [3, f.a.p, 3 * f.a.p, 36 * f.a.p],
+    gym: () => [gymBill, 1, gymBill, 8, gymBill / 8],
+    tooth: () => [m.cushion],
+    laundry: () => [m.bills.length, decWeek.length, 1, 7],
+  }
+  const same = (x: number[], y: number[]) => x.length === y.length && x.every((v, k) => Math.abs(v - y[k]) < 1e-9)
+  const wrong: string[] = []
+  const want = (what: string, t: string | undefined, exp: number[] | null) => {
+    if (!t) return
+    const got = nums(t), e = (exp ?? []).slice().sort((x, y) => x - y)
+    if (!same(got, e)) wrong.push(`${what}: ${got.join('/')} ≠ ${exp ? e.join('/') : 'no source'}`)
+  }
+  for (const f of FORKS) {
+    want(`${f.id}.fact`, f.fact, src[f.id] ? src[f.id](f) : null)
+    for (const o of [f.a, f.b]) if (o.later) {
+      const other = o === f.a ? f.b : f.a
+      want(`${f.id} later fact`, o.later.fact, [other.p, o.later.p])
+      want(`${f.id} was`, o.later.was, [other.p])
+    }
+    if (f.a.back) want(`${f.id} back`, f.a.back.t, [f.a.back.p])
+  }
+  const blackQ = forkById('blackfriday').q.includes('−40%'), rainQ = forkById('rain').a.p === 2 * forkById('bolt').a.p
+  const rentIn = decWeek.some(b => b.label === NINO.fixed.find(f => f.kind === 'rent')!.name)
+  const temuQ = forkById('temu').q.includes('12')
+  const daysOfCushion = m.cushion / (m.bg.reduce((x, y) => x + y, 0) / 30)
+  check('every amount in a fact matches the prices and bills it comes from', wrong.length === 0 && blackQ && rainQ && rentIn && temuQ && daysOfCushion >= 2 && daysOfCushion <= 9,
+    [...wrong, blackQ ? '' : 'black friday is not −40%', rainQ ? '' : 'rain is not Bolt ×2', rentIn ? '' : 'rent is not on 1–7 Dec', temuQ ? '' : 'temu question lost its 12', `cushion = ${daysOfCushion.toFixed(1)} days of everyday spending`].filter(Boolean).join('; '))
 }
 
 console.log(fails === 0 ? '\nFORK OK' : `\n${fails} FAILED`)

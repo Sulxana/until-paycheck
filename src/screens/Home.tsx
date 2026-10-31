@@ -116,8 +116,10 @@ export function Home() {
         <RoadScene weather={weather} nDays={v.nDays} day={v.day} labels={p.dayLabels} paydayLabel={p.paydayLabel.split(', ')[1]} mood={v.hardship ? 'calm' : preview ? moodFor(preview) : demo.finished ? 'celebrate' : moodFor(weather)} stage={stage} accessories={gameOff ? [] : game.equipped} height={300} walking={!demo.finished} bubble={preview ? null : bubble} onJikhoTap={tapJikho} hop={hop} calm={v.hardship} />
         {/* mini-game: this persona's month, payday to payday */}
         {!gameOff && (
-          <motion.button whileTap={{ scale: 0.94 }} className="chip" style={{ position: 'absolute', left: 14, top: 56, zIndex: 3, background: 'linear-gradient(160deg,#ffd977,#ffb020)', color: '#3b2a00', fontWeight: 800, padding: '8px 13px', boxShadow: '0 6px 16px rgba(255,176,32,0.4)' }} onClick={() => setPlaying(true)}>
-            ▶ ითამაშე ეს თვე
+          <motion.button whileTap={{ scale: 0.9 }} whileHover={{ scale: 1.06 }} animate={{ y: [0, -3, 0] }} transition={{ y: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' } }}
+            aria-label="თამაში" title="ითამაშე"
+            style={{ position: 'absolute', left: 14, top: 56, zIndex: 3, width: 50, height: 50, borderRadius: 25, display: 'grid', placeItems: 'center', background: 'linear-gradient(160deg,#ffd977,#ffb020)', border: '3px solid #fff', boxShadow: '0 6px 16px rgba(255,176,32,0.45)' }} onClick={() => setPlaying(true)}>
+            <GamepadIcon />
           </motion.button>
         )}
         {/* time machine */}
@@ -546,6 +548,19 @@ export function Tower({ stones, size = 56 }: { stones: number; size?: number }) 
         <motion.rect key={i} x={9 + (i % 2) * 0.6} y={48 - i * 3.6} width="22" height="3.2" rx="1" fill={i % 2 ? '#cfc3ae' : '#b9aa90'} initial={i === n - 1 ? { y: -20, opacity: 0 } : false} animate={{ y: 48 - i * 3.6, opacity: 1 }} transition={{ type: 'spring', damping: 9, delay: 0.7 }} />
       ))}
       {n >= 12 && <path d="M7 6 L20 -2 L33 6 Z" fill="#7a5a3a" />}
+    </svg>
+  )
+}
+
+/** drawn gamepad for the mini-game button (no font glyph, looks the same everywhere) */
+function GamepadIcon() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
+      <path d="M7.5 8.5h13a5.5 5.5 0 0 1 5.3 4.1l1 3.9a3.6 3.6 0 0 1-6.3 3.1l-2-2.4h-9l-2 2.4a3.6 3.6 0 0 1-6.3-3.1l1-3.9a5.5 5.5 0 0 1 5.3-4.1z" fill="#1f3b57" />
+      <rect x="7.2" y="11" width="2.2" height="6.4" rx="1" fill="#ffd977" />
+      <rect x="5" y="13.1" width="6.6" height="2.2" rx="1" fill="#ffd977" />
+      <circle cx="19.6" cy="12.6" r="1.4" fill="#ff7a59" />
+      <circle cx="22.4" cy="15.4" r="1.4" fill="#5aa9e6" />
     </svg>
   )
 }

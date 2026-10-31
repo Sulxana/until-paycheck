@@ -7,8 +7,9 @@ import { Jikho, JikhoMood, Accessory } from '../components/Jikho'
 import { WeatherKind } from '../engine/engine'
 import {
   buildMonth, newRun, advanceTo, chooseFork, hitScam, dodgeScam, catchJoy, missJoy, forecast, locked, endingOf, moveStep, contactOf, wRank,
-  hillAt, laneProfile, laneSign, Run, Fx, Fc, Ending,
-  FORK_LEN, LANE_DY, FATIGUE_PAUSE, DEFAULT_SEED, E_RESET, LOOK, JUMP_V, GRAV, COMBO_MOVE,
+  hillAt, laneProfile, laneSign, forkFact, endFacts, pricier, keepTogether, Run, Fx, Fc, Ending, SeenFact,
+  FORK_LEN, LANE_DY, FATIGUE_PAUSE, DEFAULT_SEED, E_RESET, LOOK, JUMP_V, GRAV, COMBO_MOVE, FACT_WAIT_MS, BANNER_AHEAD, NOTE_MS,
+  NOTE_SEEN_MS, SHARE_ROOM, factMs, factMayShow, scamAhead, noticeAhead,
 } from './sim'
 import { audio } from './audio'
 import { Backdrop, Rain, FAR_W, MID_W } from './parts/Backdrop'
@@ -89,6 +90,17 @@ interface GState {
   lowWarned: boolean
   trudge: boolean
   salary: boolean
+  /** index of the last fork whose fact was shown */
+  factLast: number
+  /** a fact that waits (briefly) for the toasts to clear */
+  factWait: (SeenFact & { i: number; until: number }) | null
+  /** the facts the player met on the way (for the end card) */
+  seen: SeenFact[]
+  /** key of the fact on screen (0: none), and when it goes */
+  factOn: number
+  factEnd: number
+  /** a scam's rule is on screen until then (no fact next to it) */
+  ruleUntil: number
 }
 
 interface Toast { id: number; icon: string; title: string; line?: string }
@@ -111,6 +123,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
       pend: 0, preview: null, active: false, stopped: false, waitSince: 0, holdUntil: 0, ended: false, win: 0, nextItem: 0, dustT: 0, prop: '',
       ptr: null, keySide: null, seenJoy: false, seenScam: false, tut: !tutorialDone(), tutIdx: -1, tutTap: false, timeScale: 1, tutOn: false,
       hint: null, banner: null, tension: false, dayToasts: { work: false, rest: false }, lowWarned: false, trudge: false, salary: false,
+      factLast: -99, factWait: null, seen: [], factOn: 0, factEnd: 0, ruleUntil: 0,
     }
   }
   const g = G.current
@@ -136,6 +149,8 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
   const jx = size.W < 420 ? 64 : 92 // Jikho's x on screen: more road ahead on a narrow screen
   // the road sits above the choice pads: the lower lane's sign must clear them
   const baseY = Math.max(Math.round(size.H * 0.5), Math.min(Math.round(size.H * 0.6), size.H - PADS_H - LANE_DY - 72))
+  // room above Jikho's head for a scam banner and a fact together (the notices start 158 px down: fork.css .f-info)
+  const share = baseY - J_FOOT - 158 >= SHARE_ROOM
   const [hud, setHud] = useState(() => ({ fc: forecast(m, r), money: r.money, energy: r.energy, day: r.day, combo: 0, emptied: false }))
   const [fk, setFk] = useState<ForkUi | null>(null)
   const [active, setActive] = useState(false)
@@ -154,6 +169,10 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
   const [tension, setTension] = useState(false)
   const [muted, setMuted] = useState(audio.muted)
   const [stamp, setStamp] = useState<{ k: number; text: string } | null>(null)
+  const [fact, setFact] = useState<{ k: number; t: string } | null>(null)
+  /** when each notice on screen goes (performance.now() ms) */
+  const notes = useRef<number[]>([])
+  const notesLeft = (now: number) => { notes.current = notes.current.filter(e => e > now); return notes.current.map(e => e - now) }
   const [best] = useState(loadBest)
   const touch = useMemo(() => { try { return window.matchMedia('(pointer: coarse)').matches } catch { return false } }, [])
 
@@ -167,8 +186,25 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
   const toast = (icon: string, title: string, line?: string, ms = 2800) => {
     const id = seq.current++
     setToasts(ts => [...ts.slice(-1), { id, icon, title, line }])
+    const now = performance.now()
+    notes.current.push(now + ms)
+    // under a scam banner a notice waits behind the fact, unless it would then be seen too briefly: then the fact goes
+    if (g.factOn && scamAhead(m, r, g.x) < BANNER_AHEAD && ms - (g.factEnd - now) < NOTE_SEEN_MS) hideFact()
     later(() => setToasts(ts => ts.filter(t => t.id !== id)), ms)
   }
+  /** a short true fact under the HUD for a moment: it never blocks input and never covers the pads */
+  const showFact = (t: string, i: number, w: number, p: number) => {
+    const k = seq.current++
+    g.factLast = i
+    g.seen.push({ t, w, p })
+    g.factOn = k
+    g.factEnd = performance.now() + factMs(t)
+    setFact({ k, t })
+    later(() => { if (g.factOn === k) g.factOn = 0; setFact(f => (f && f.k === k ? null : f)) }, factMs(t))
+  }
+  /** a fact on screen goes early (a scam's rule, or a notice under a scam banner, needs the room); it stays among the seen
+   * ones. Under a scam banner a fact and a notice never show together (on a small phone the three reach down to Jikho). */
+  const hideFact = () => { if (g.factOn) { g.factOn = 0; setFact(null) } }
   const refresh = () => {
     const fc = forecast(m, r)
     setHud({ fc, money: r.money, energy: r.energy, day: r.day, combo: r.combo, emptied: r.zeroHits > 0 })
@@ -179,7 +215,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
       setFk({ i: f.i, preview: g.preview, fcs })
     } else { fcsRef.current = null; setFk(null) }
     setVer(v => v + 1)
-    if (started && !g.ended && r.energy <= 2 && !g.lowWarned) { g.lowWarned = true; toast('⚡', '⚡ ცოტაა', 'დასვენება და სიხარულები აღადგენს', 3200) }
+    if (started && !g.ended && r.energy <= 2 && !g.lowWarned) { g.lowWarned = true; toast('⚡', '⚡ ცოტაა', 'დასვენება და სიხარულები აღადგენს', NOTE_MS.low) }
   }
   const sceneXY = (el: HTMLElement | null): [number, number] | null => {
     const s = sceneRef.current?.getBoundingClientRect(), b = el?.getBoundingClientRect()
@@ -275,6 +311,9 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     setWaiting(false)
     setHint(null)
     setBanner(null)
+    setFact(null)
+    g.factOn = 0
+    g.factWait = null
     g.active = false
     setActive(false)
     audio.stopMusic()
@@ -297,22 +336,25 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
         const rentBills = m.bills.filter(b => b.rent)
         if (e.bill.rent && e.bill === rentBills[0]) {
           const sum = rentBills.reduce((s, b) => s + b.amount, 0)
-          toast('🏠', `${rentBills.map(b => b.label).join(' და ')} · ${fmt(sum)} ₾ — გადახდილია`, 'ანგარიში შემცირდა, ხელფასის დღის პროგნოზი თითქმის არ შეცვლილა: ქირა თავიდანვე დათვლილი იყო', 4600)
-        } else if (e.nth === 0) toast(e.bill.icon, `${e.bill.label} · ${fmt(e.bill.amount)} ₾ — გადახდილია`, 'ანგარიში შემცირდა, ხელფასის დღის პროგნოზი — არა: ეს გადასახადი უკვე დათვლილი იყო', 4200)
+          toast('🏠', `${rentBills.map(b => b.label).join(' და ')} · ${fmt(sum)} ₾ — გადახდილია`, 'ანგარიში შემცირდა, ხელფასის დღის პროგნოზი თითქმის არ შეცვლილა: ქირა თავიდანვე დათვლილი იყო', NOTE_MS.rent)
+        } else if (e.nth === 0) toast(e.bill.icon, `${e.bill.label} · ${fmt(e.bill.amount)} ₾ — გადახდილია`, 'ანგარიში შემცირდა, ხელფასის დღის პროგნოზი — არა: ეს გადასახადი უკვე დათვლილი იყო', NOTE_MS.bill)
       } else if (e.k === 'fail') finish('storm')
       else if (e.k === 'arrive') finish(endingOf(m, r))
-      else if (e.k === 'later') { toast(e.s.e, `${e.s.t} · ${fmt(e.paid)} ₾`, e.s.was, 3800); audio.scam(); floatMoney(-e.paid); if (e.s.en) floatEnergy(e.s.en) }
-      else if (e.k === 'back') { toast(e.s.e, e.s.t, undefined, 3000); audio.joy(); floatMoney(-e.s.p) }
-      else if (e.k === 'surprise') { toast(e.s.e, `მოულოდნელი: ${e.s.t} · ${fmt(e.paid)} ₾`, 'პროგნოზი ასეთ შემთხვევებსაც ითვალისწინებდა', 3600); audio.scam(); floatMoney(-e.paid) }
+      else if (e.k === 'later') {
+        toast(e.s.e, `${e.s.t} · ${fmt(e.paid)} ₾`, e.s.was, NOTE_MS.later); audio.scam(); floatMoney(-e.paid); if (e.s.en) floatEnergy(e.s.en)
+        if (e.s.fact) g.seen.push({ t: e.s.fact, w: 3, p: e.paid })
+      }
+      else if (e.k === 'back') { toast(e.s.e, e.s.t, undefined, NOTE_MS.back); audio.joy(); floatMoney(-e.s.p) }
+      else if (e.k === 'surprise') { toast(e.s.e, `მოულოდნელი: ${e.s.t} · ${fmt(e.paid)} ₾`, 'პროგნოზი ასეთ შემთხვევებსაც ითვალისწინებდა', NOTE_MS.surprise); audio.scam(); floatMoney(-e.paid) }
       else if (e.k === 'dayEn') {
         floatEnergy(e.delta, e.delta < 0 ? '💼 ' : '🛋️ ')
-        if (e.delta < 0 && !g.dayToasts.work) { g.dayToasts.work = true; toast('💼', 'სამუშაო დღე ⚡-ს ხარჯავს', 'შაბათ-კვირა და სიხარულები ⚡-ს აბრუნებს', 3400) }
-        if (e.delta > 0 && !g.dayToasts.rest) { g.dayToasts.rest = true; toast('🛋️', 'შაბათ-კვირა: დასვენება ⚡+1', undefined, 2600) }
+        if (e.delta < 0 && !g.dayToasts.work) { g.dayToasts.work = true; toast('💼', 'სამუშაო დღე ⚡-ს ხარჯავს', 'შაბათ-კვირა და სიხარულები ⚡-ს აბრუნებს', NOTE_MS.work) }
+        if (e.delta > 0 && !g.dayToasts.rest) { g.dayToasts.rest = true; toast('🛋️', 'შაბათ-კვირა: დასვენება ⚡+1', undefined, NOTE_MS.rest) }
       } else if (e.k === 'fatigue') {
         g.holdUntil = performance.now() + FATIGUE_PAUSE * 1000
         setMoodTmp('resting')
         later(() => setMoodTmp(mm => (mm === 'resting' ? null : mm)), FATIGUE_PAUSE * 1000)
-        toast(e.e, `${e.t} · ${fmt(e.p)} ₾`, `⚡ დაიცალა: ჯიხომ დაისვენა, ⚡ ${E_RESET}-მდე აღდგა. ამ თვეს ☀️ აღარ გამოვა`, 4200)
+        toast(e.e, `${e.t} · ${fmt(e.p)} ₾`, `⚡ დაიცალა: ჯიხომ დაისვენა, ⚡ ${E_RESET}-მდე აღდგა. ამ თვეს ☀️ აღარ გამოვა`, NOTE_MS.fatigue)
         audio.tired()
         floatMoney(-e.p)
       }
@@ -355,7 +397,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     setFk(cur => (cur ? { ...cur, preview: side } : cur))
     if (side !== null) { const c = fcsRef.current; audio.preview(!!c && wRank(c.fcs[side].weather) > wRank(c.base.weather)) }
   }
-  const lockedToast = () => toast('🔒', 'ამ გზისთვის ანგარიშზე საკმარისი თანხა არ არის', undefined, 2400)
+  const lockedToast = () => toast('🔒', 'ამ გზისთვის ანგარიშზე საკმარისი თანხა არ არის', undefined, NOTE_MS.locked)
   const commit = (side: 0 | 1) => {
     if (!started || paused || g.ended || !forkActive()) return
     const f = pendFork()
@@ -378,6 +420,8 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     if (ch.k === 'choose' && ch.balanced && ch.combo >= 3 && ch.combo % 3 === 0) celebrate(ch.combo)
     handleFx(fx.slice(1))
     refresh()
+    const ft = forkFact(m, f.i, g.factLast)
+    if (ft) g.factWait = { t: ft, i: f.i, w: pricier(f, side) ? 2 : 1, p: pricier(f, side) ? o.p : 0, until: performance.now() + FACT_WAIT_MS }
   }
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -479,7 +523,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     // a scam ahead is announced early, so its full text can be read in time (the road shows a short version)
     const si = m.items.findIndex((it, i) => it.kind === 'scam' && !r.item[i] && it.x > g.x - 20)
     const sc = si >= 0 ? m.items[si] : null
-    if (sc && sc.kind === 'scam' && sc.x - g.x < 460) return `!${sc.def.e} ${sc.def.sign}`
+    if (sc && sc.kind === 'scam' && sc.x - g.x < BANNER_AHEAD) return `!${sc.def.e} ${sc.def.sign}`
     if (g.x > m.climbFrom && g.x < m.rentX) {
       const rb = m.bills.filter(b => b.rent)
       return `⛰ ქირის მთა · ${m.days[21].label}: ${fmt(rb.reduce((s, b) => s + b.amount, 0))} ₾`
@@ -511,6 +555,13 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     const fx = advanceTo(m, r, g.x)
     if (fx.length) handleFx(fx)
     if (g.ended) { place(); return }
+    // a fact waits while a scam is announced or its rule is up (the jump and the rule come first), and for the notices
+    // to clear (sim.ts: factMayShow); then it takes a notice's slot
+    const fw = g.factWait
+    if (fw) {
+      if (factMayShow(notesLeft(now), scamAhead(m, r, g.x), noticeAhead(m, r, g.x, g.dayToasts), now < g.ruleUntil, factMs(fw.t), share)) { g.factWait = null; showFact(fw.t, fw.i, fw.w, fw.p) }
+      else if (now > fw.until) g.factWait = null
+    }
 
     // scams and joys at Jikho's feet
     for (let i = g.nextItem; i < m.items.length; i++) {
@@ -526,7 +577,12 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
         if (out.length && out[0].k === 'scam') {
           audio.scam()
           g.squash = 1.2
-          toast(it.def.e, `−${fmt(out[0].paid)} ₾ · ${it.def.hit}`, it.def.rule, 4200)
+          // the rule is the lesson here: no fork fact next to it
+          hideFact()
+          g.factWait = null
+          g.ruleUntil = now + NOTE_MS.scam
+          toast(it.def.e, `−${fmt(out[0].paid)} ₾ · ${it.def.hit}`, it.def.rule, NOTE_MS.scam)
+          g.seen.push({ t: it.def.rule, w: 3, p: out[0].paid })
           floatMoney(-out[0].paid)
           setMoodTmp('worried')
           later(() => setMoodTmp(mm => (mm === 'worried' ? null : mm)), 1000)
@@ -587,7 +643,12 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     const h = wantHint(now)
     if (h !== g.hint) { g.hint = h; setHint(h) }
     const b = wantBanner()
-    if (b !== g.banner) { g.banner = b; setBanner(b) }
+    if (b !== g.banner) {
+      // a scam banner that comes while a fact and a notice are up (on a small phone: while a fact is up) sends the fact away
+      if (b && b[0] === '!' && g.factOn && (!share || notesLeft(now).length > 0)) hideFact()
+      g.banner = b
+      setBanner(b)
+    }
     place()
   }
   const stepRef = useRef(step)
@@ -631,7 +692,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
     if (!started || g.salary) return
     g.salary = true
     audio.salary()
-    toast('💰', `ხელფასი · +${fmt(m.salary)} ₾`, `ანგარიშზე ${fmt(Math.round(r.money))} ₾ · შემდეგი ხელფასი ${m.days[30].label}`, 3200)
+    toast('💰', `ხელფასი · +${fmt(m.salary)} ₾`, `ანგარიშზე ${fmt(Math.round(r.money))} ₾ · შემდეგი ხელფასი ${m.days[30].label}`, NOTE_MS.salary)
     refresh()
   }, [started])
 
@@ -702,12 +763,17 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
           {banner && <motion.div key={banner} className={'f-banner' + (banner[0] === '!' ? ' scam' : '')} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}><span>{banner[0] === '!' ? banner.slice(1) : banner}</span></motion.div>}
         </AnimatePresence>
         <AnimatePresence initial={false}>
-          {toasts.map(t => (
+          {(fact && !end ? (banner && banner[0] === '!' ? [] : toasts.slice(-1)) : toasts).map(t => (
             <motion.div key={t.id} layout className="f-toast" initial={{ opacity: 0, y: -10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.2 } }}>
               <span className="ic">{t.icon}</span>
               <span className="tx"><b>{t.title}</b>{t.line && <small>{t.line}</small>}</span>
             </motion.div>
           ))}
+          {fact && !end && (
+            <motion.div key={'fact' + fact.k} layout className="f-fact" role="status" initial={{ opacity: 0, y: -8, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, transition: { duration: 0.25 } }}>
+              <span className="ic">💡</span><span>{keepTogether(fact.t)}</span>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
       <div className="f-hints">
@@ -731,7 +797,7 @@ function RunView({ seed, calm, note, started, onStart, onReplay, onNew, onExit }
           <button className="f-go" onClick={resume} autoFocus>▶ გავაგრძელოთ</button>
         </div>
       )}
-      {showEnd && end && <EndCard m={m} r={r} kind={end.kind} prev={end.prev} note={note} stage={stage} accessories={game.equipped} onReplay={onReplay} onNew={onNew} onExit={onExit} />}
+      {showEnd && end && <EndCard m={m} r={r} kind={end.kind} prev={end.prev} note={note} stage={stage} accessories={game.equipped} facts={endFacts(m, r, g.seen)} onReplay={onReplay} onNew={onNew} onExit={onExit} />}
     </>
   )
 }
