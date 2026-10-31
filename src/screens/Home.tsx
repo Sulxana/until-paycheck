@@ -339,7 +339,7 @@ export const RED_LINES = [
 ]
 export const RED_LINES_SHOWN = 4
 
-function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const v = useToday()
   const game = useStore(s => s.games[v.p.id])
   const setTab = useStore(s => s.setTab)

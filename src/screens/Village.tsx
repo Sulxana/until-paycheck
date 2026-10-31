@@ -4,7 +4,7 @@ import { useStore, evolutionStage, COSMETIC_POOL } from '../state/store'
 import { usePersona } from '../engine/view'
 import { Jikho } from '../components/Jikho'
 import { Sheet, InfoTip } from '../components/ui'
-import { RED_LINES, RED_LINES_SHOWN } from './Home'
+import { RED_LINES, RED_LINES_SHOWN, StreakSheet } from './Home'
 import type { PlaceId } from '../components/village/Places'
 import { VillageScene } from '../components/village/VillageScene'
 import { PlaceSheet, YearMap, Wardrobe, jikhoTips } from '../components/village/VillageSections'
@@ -66,20 +66,12 @@ export function Village() {
         <div className="between">
           <div className="h2" style={{ fontSize: 22 }}>ჯიხოს სოფელი</div>
           {!hardship && (
-            <button className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} onClick={() => setFreezeInfo(v => !v)} aria-expanded={freezeInfo}>
+            <button className="chip" style={{ background: '#fff4dc', color: '#7a4f00' }} onClick={() => setFreezeInfo(true)} aria-label="სერია">
               🏮 {game.streak} დღე
             </button>
           )}
         </div>
-        <AnimatePresence>
-          {freezeInfo && !hardship && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ overflow: 'hidden' }}>
-              <div className="tiny muted" style={{ textAlign: 'right', marginTop: 6 }}>
-                {game.streak} დღე ზედიზედ{game.freezes > 0 ? ` · ❄ ${game.freezes} დაცვის დღე — გაცდენისას სერია არ წყდება` : ''}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <StreakSheet open={freezeInfo} onClose={() => setFreezeInfo(false)} />
       </motion.div>
 
       {/* the village */}

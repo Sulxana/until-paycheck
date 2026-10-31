@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, CHECK_MAX } from '../state/store'
 import { useToday } from '../engine/view'
 import { Sheet, InfoTip } from '../components/ui'
+import { StreakSheet } from './Home'
 import { Morning } from '../components/day/Morning'
 import { Evening } from '../components/day/Evening'
 import { BeatCard, QuestsCard, beatNumbers } from '../components/day/Weekly'
@@ -22,6 +23,7 @@ const SHORT: Record<TopicId, string> = {
 const ORDER: TopicId[] = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9']
 
 export function Day() {
+  const [streakOpen, setStreakOpen] = useState(false)
   const v = useToday()
   const { p } = v
   const game = useStore(s => s.games[p.id])
@@ -64,9 +66,9 @@ export function Day() {
             <div className="small muted">დღეში 2 წუთი, შენივე რიცხვებით</div>
           </div>
           {!gameOff && !v.hardship && (
-            <motion.span key={game.streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="chip" style={{ background: game.litToday ? '#fff1cc' : '#f2ede4' }}>
+            <motion.button key={game.streak} initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="chip" style={{ background: game.litToday ? '#fff1cc' : '#f2ede4' }} onClick={() => setStreakOpen(true)} aria-label="სერია">
               🏮 {game.streak}{game.litToday ? ' · ანთია' : ''}
-            </motion.span>
+            </motion.button>
           )}
         </div>
 
@@ -197,6 +199,7 @@ export function Day() {
 
       <div style={{ height: 18 }} />
 
+      <StreakSheet open={streakOpen} onClose={() => setStreakOpen(false)} />
       <Sheet open={checkOpen} onClose={() => setCheckOpen(false)}>
         {checkOpen && <Checkup onClose={() => setCheckOpen(false)} todayLabel={todayLabel} />}
       </Sheet>
