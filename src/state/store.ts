@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { PERSONAS, Persona } from '../engine/personas'
 import type { Accessory } from '../components/Jikho'
+import type { TopicId } from '../content/lessons'
 
 export type Tab = 'road' | 'analytics' | 'chat' | 'village' | 'day'
 export type PersonaId = Persona['id']
@@ -12,6 +13,23 @@ export interface Game {
   station: number; stationXp: number; qvevri: Qvevri[]; streak: number; freezes: number; litToday: boolean
   morningDone: boolean; eveningDone: boolean; cosmetics: Accessory[]; equipped: Accessory[]; pendingChoice: Accessory[] | null
   confirmed: string[]; beatGuess: number | null; questsDone: string[]; lessonCursor: number; landmarksSeen: number
+  /** topic mastery 0–100 */
+  mastery: Record<TopicId, number>
+  /** knowledge check history (score out of CHECK_MAX); first entry is the starting point */
+  checks: { label: string; score: number }[]
+  /** rules collected from micro-lessons ("ჩემი წესები") */
+  rules: TopicId[]
+}
+export const CHECK_MAX = 6
+const MASTERY: Record<PersonaId, Record<TopicId, number>> = {
+  nino: { M1: 70, M2: 55, M3: 30, M4: 20, M5: 45, M6: 25, M7: 60, M8: 10, M9: 15 },
+  luka: { M1: 35, M2: 25, M3: 15, M4: 10, M5: 30, M6: 10, M7: 40, M8: 5, M9: 5 },
+  tamar: { M1: 65, M2: 40, M3: 35, M4: 30, M5: 20, M6: 35, M7: 55, M8: 15, M9: 25 },
+}
+const FIRST_CHECK: Record<PersonaId, { label: string; score: number }> = {
+  nino: { label: '2 ოქტ', score: 3 },
+  luka: { label: '15 ოქტ', score: 2 },
+  tamar: { label: '5 ოქტ', score: 3 },
 }
 export interface Demo { day: number; extra: number; ceremony: null | { landing: number; safe: boolean; cushion: number }; finished: boolean }
 export interface ChatCard { kind: 'purchase' | 'installment' | 'forecast' | 'concept' | 'safe' | 'compare'; data: any }
@@ -37,6 +55,7 @@ function initialGame(p: Persona): Game {
     streak: g.streak, freezes: g.freezes, litToday: false, morningDone: false, eveningDone: false,
     cosmetics: p.id === 'nino' ? ['scarf', 'backpack', 'umbrella'] : ['backpack'], equipped: p.id === 'nino' ? ['scarf'] : [],
     pendingChoice: null, confirmed: [], beatGuess: null, questsDone: [], lessonCursor: 0, landmarksSeen: g.cycles,
+    mastery: { ...MASTERY[p.id] }, checks: [FIRST_CHECK[p.id]], rules: p.id === 'nino' ? ['M1', 'M7'] : [],
   }
 }
 const initialDemo = (): Demo => ({ day: 0, extra: 0, ceremony: null, finished: false })
@@ -72,6 +91,12 @@ interface Store {
   resetAll: () => void
   resetDemo: () => void
   setGameOff: (v: boolean) => void
+  /** an answered lesson item: correct answers grow mastery more, wrong ones still teach a little */
+  learn: (topic: TopicId, correct: boolean) => void
+  /** a finished 30-second micro-lesson: adds its rule to "ჩემი წესები" */
+  microDone: (topic: TopicId) => void
+  /** a finished knowledge check */
+  checkupDone: (score: number, label: string) => void
 }
 
 const ids = PERSONAS.map(p => p.id)
@@ -196,6 +221,25 @@ export const useStore = create<Store>()(
           set({ demos: { ...get().demos, [id]: initialDemo() }, games: { ...get().games, [id]: initialGame(PERSONAS.find(p => p.id === id)!) }, chats: { ...get().chats, [id]: [] } })
         },
         setGameOff: v => set({ gameOff: v }),
+        learn: (topic, correct) => {
+          const g = get().games[get().personaId]
+          const before = g.mastery[topic] ?? 0
+          const after = Math.min(100, before + (correct ? 15 : 6))
+          patchGame(gg => ({ mastery: { ...gg.mastery, [topic]: after }, topics: before < 80 && after >= 80 ? gg.topics + 1 : gg.topics }))
+          if (before < 80 && after >= 80 && !get().gameOff) setTimeout(() => get().toast('🏫', 'თემა ათვისებულია — სკოლას ახალი ოთახი დაემატა'), 600)
+        },
+        microDone: topic => {
+          const g = get().games[get().personaId]
+          const fresh = !g.rules.includes(topic)
+          patchGame(gg => ({ rules: fresh ? [...gg.rules, topic] : gg.rules, mastery: { ...gg.mastery, [topic]: Math.min(100, (gg.mastery[topic] ?? 0) + 8) } }))
+          if (fresh) get().toast('📗', 'ახალი წესი „ჩემს წესებში" ჩაიწერა')
+        },
+        checkupDone: (score, label) => {
+          const g = get().games[get().personaId]
+          const first = g.checks[0]?.score ?? 0
+          patchGame(gg => ({ checks: [...gg.checks, { label, score }] }))
+          get().toast('🎓', score > first ? `ცოდნის ქულა: ${first} → ${score} (${CHECK_MAX}-დან)` : `ცოდნის ქულა: ${score}/${CHECK_MAX}`)
+        },
       }
     },
     {
@@ -204,7 +248,12 @@ export const useStore = create<Store>()(
         try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return localStorage } catch { const m = new Map<string, string>(); return { getItem: k => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v), removeItem: k => void m.delete(k) } }
       }),
       partialize: s => ({ personaId: s.personaId, games: s.games, demos: s.demos, chats: s.chats, gameOff: s.gameOff }),
-      version: 1,
+      version: 2,
+      // v1 saves lack the learning fields: keep progress, fill the gaps from the persona defaults
+      migrate: (old: any) => {
+        const games = Object.fromEntries(PERSONAS.map(p => [p.id, { ...initialGame(p), ...(old?.games?.[p.id] ?? {}) }]))
+        return { ...old, games } as any
+      },
     },
   ),
 )

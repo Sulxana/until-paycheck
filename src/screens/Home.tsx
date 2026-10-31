@@ -9,6 +9,7 @@ import { BANK_META, PERSONAS } from '../engine/personas'
 import { WeatherKind, WEATHER_LABEL } from '../engine/engine'
 import { TowerPlace } from '../components/village/Places'
 import { Confetti } from '../components/day/parts'
+import { LearnLink } from '../components/learn/LearnLink'
 
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
@@ -270,6 +271,7 @@ function PurchaseSheet({ open, onClose, onPreview }: { open: boolean; onClose: (
               <Jikho size={64} mood={moodFor(result.weather)} stage={stage} accessories={result.weather === 'storm' || result.weather === 'rain' ? ['umbrella'] : []} />
               <div className="card" style={{ flex: 1, padding: 12, fontSize: 13, borderTopLeftRadius: 6 }}>{jikhoLine(result.weather)} რასაც არ უნდა აირჩიო, ხიდს ფიცარი დაემატება.</div>
             </div>
+            <LearnLink topic="M2" text="რას ნიშნავს ეს ციფრები?" />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 14 }}>
               <button className="pill-btn btn-ghost" onClick={() => decide(false)}>დაველოდები</button>
               <button className="pill-btn btn-primary" onClick={() => decide(true)}>ვყიდულობ</button>

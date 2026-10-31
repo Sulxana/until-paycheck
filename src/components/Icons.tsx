@@ -34,6 +34,15 @@ export function IconVillage({ on, size = 26 }: P) {
     </svg>
   )
 }
+export function IconLearn({ on, size = 26 }: P) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 26 26" fill="none" stroke={stroke(on)} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 6.5 C 7 5, 10 5.5, 13 7.5 C 16 5.5, 19 5, 23 6.5 V 20 C 19 18.8, 16 19.2, 13 21 C 10 19.2, 7 18.8, 3 20 Z" fill={on ? 'rgba(255,201,74,0.35)' : 'none'} />
+      <path d="M13 7.5 V 21" />
+      <path d="M17 10.5 l1.4 1.4 l2.6 -2.8" stroke={on ? '#2f9e62' : stroke(on)} />
+    </svg>
+  )
+}
 export function IconDay({ on, size = 26 }: P) {
   return (
     <svg width={size} height={size} viewBox="0 0 26 26" fill="none" stroke={stroke(on)} strokeWidth="2" strokeLinecap="round">

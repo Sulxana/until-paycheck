@@ -7,6 +7,7 @@ import { WeatherChip, WCOLOR } from '../ui'
 import { morningSet, ActionKind, TOPICS, LessonCtx } from '../../content/lessons'
 import { JikhoSays, Steps, QuizCard, Confetti } from './parts'
 import { useDayLocal } from './local'
+import { MicroLesson } from '../learn/MicroLesson'
 
 const r10 = (v: number) => Math.round(v / 10) * 10
 
@@ -42,8 +43,10 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
   const mood: JikhoMood = current === null ? 'talking' : current ? 'celebrate' : 'calm'
   const line = current === null ? ASK_LINES[idx] : current ? OK_LINES[idx] : SOFT_LINES[idx]
 
-  const start = () => { setPhase('quiz'); setIdx(0); setResults([null, null, null]); onFocus(true) }
-  const answer = (ok: boolean) => setResults(r => r.map((x, i) => (i === idx ? ok : x)))
+  const start = () => { setPhase('quiz'); setIdx(0); setResults([null, null, null]); setTaught(null); onFocus(true) }
+  const learn = useStore(s => s.learn)
+  const [taught, setTaught] = useState<number | null>(null)
+  const answer = (ok: boolean) => { setResults(r => r.map((x, i) => (i === idx ? ok : x))); learn(slots[idx].item.topic, ok) }
   const next = () => {
     if (idx < 2) { setIdx(idx + 1); return }
     const n = results.filter(Boolean).length
@@ -118,9 +121,15 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
           <JikhoSays mood={mood} text={line} stage={stage} accessories={acc} />
         </div>
         <AnimatePresence mode="wait">
-          <motion.div key={s.item.id + idx} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: 'spring', damping: 24, stiffness: 260 }}>
-            <QuizCard item={s.item} label={s.label} onAnswer={answer} onNext={next} nextLabel={idx < 2 ? 'შემდეგი →' : 'დასრულება'} onAction={onAction} />
-          </motion.div>
+          {s.slot === 'new' && taught !== idx ? (
+            <motion.div key={'teach' + idx} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} className="card" style={{ padding: 16 }}>
+              <MicroLesson topic={s.item.topic} kicker="ჯერ ისწავლე · 30 წამი" doneLabel="ახლა სცადე →" onDone={() => setTaught(idx)} />
+            </motion.div>
+          ) : (
+            <motion.div key={s.item.id + idx} initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} transition={{ type: 'spring', damping: 24, stiffness: 260 }}>
+              <QuizCard item={s.item} label={s.label} onAnswer={answer} onNext={next} nextLabel={idx < 2 ? 'შემდეგი →' : 'დასრულება'} onAction={onAction} />
+            </motion.div>
+          )}
         </AnimatePresence>
         <button className="small muted" style={{ display: 'block', margin: '14px auto 0', fontWeight: 600 }} onClick={() => { setPhase('intro'); onFocus(false) }}>
           ← უკან ამინდზე

@@ -6,7 +6,7 @@ import { PERSONAS } from './engine/personas'
 import { Home } from './screens/Home'
 import { Jikho } from './components/Jikho'
 import { Toasts } from './components/ui'
-import { IconRoad, IconChart, IconVillage, IconDay } from './components/Icons'
+import { IconRoad, IconChart, IconVillage, IconLearn } from './components/Icons'
 import qrcode from 'qrcode-generator'
 
 const Analytics = lazy(() => import('./screens/Analytics').then(m => ({ default: m.Analytics })))
@@ -19,7 +19,7 @@ const TABS: { id: Tab; label: string; Ico: ((p: { on?: boolean }) => JSX.Element
   { id: 'analytics', label: 'ანალიზი', Ico: IconChart },
   { id: 'chat', label: 'ჯიხო', Ico: null },
   { id: 'village', label: 'სოფელი', Ico: IconVillage },
-  { id: 'day', label: 'დღე', Ico: IconDay },
+  { id: 'day', label: 'სწავლა', Ico: IconLearn },
 ]
 export const PUBLIC_URL = 'https://until-paycheck.vercel.app/'
 /** on a public host (e.g. Vercel) the QR points to the site itself; locally and inside claude.ai it falls back */
