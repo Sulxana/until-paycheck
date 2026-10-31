@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useStore } from '../../state/store'
 import { usePersona } from '../../engine/view'
-import { Sheet } from '../ui'
+import { Sheet, InfoTip } from '../ui'
 import { PARTNERS, INTERESTS, EARN_RULES, Partner } from '../../content/partners'
 
 const TERMS = 'ერთჯერადი · მოქმედებს 30 დღე · არ მოქმედებს სესხით, განვადებით, საკრედიტო ბარათით ან ოვერდრაფტით გადახდისას.'
@@ -28,19 +28,29 @@ export function Points() {
   const today = p.dayLabels[demo.day] ?? p.paydayLabel
   const iconOf = (x: Partner) => INTERESTS.find(i => i.id === x.interest)?.icon ?? '🎟️'
   const coupons = g.coupons ?? []
+  // the list shows only the rule; the bracketed condition goes into the info bubble
+  const rules = EARN_RULES.map(r => {
+    const m = r.label.match(/^(.*?)\s*\((.*)\)\s*$/)
+    return { ...r, main: m ? m[1] : r.label, cond: m ? m[2] : '' }
+  })
 
   return (
     <>
       {/* balance */}
-      <div className="card" style={{ padding: 16, background: 'linear-gradient(135deg,#1f3b57,#2c5478)', color: '#fff' }}>
-        <div className="tiny" style={{ fontWeight: 800, color: '#ffd977', letterSpacing: 0.3 }}>შენი ქულები</div>
+      <div className="card" data-info-root style={{ padding: 16, background: 'linear-gradient(135deg,#1f3b57,#2c5478)', color: '#fff', position: 'relative' }}>
+        <div className="between" style={{ gap: 8 }}>
+          <div className="tiny" style={{ fontWeight: 800, color: '#ffd977', letterSpacing: 0.3 }}>შენი ქულები</div>
+          <InfoTip>
+            <div>ქულებს იღებ კარგი ფინანსური ჩვევებისთვის და ცვლი ფასდაკლების კუპონზე.</div>
+            {hardship ? <div>გაჩვენებთ მხოლოდ აუცილებელ ხარჯს და ბიუჯეტის დახმარებას.</div> : <div>ქულებს ვადა არ აქვს.</div>}
+          </InfoTip>
+        </div>
         <div className="row" style={{ alignItems: 'baseline', gap: 8, marginTop: 4 }}>
           <motion.div key={points} initial={{ scale: 0.8, opacity: 0.5 }} animate={{ scale: 1, opacity: 1 }} style={{ fontSize: 44, fontWeight: 800, lineHeight: 1 }}>{points}</motion.div>
           <div style={{ fontSize: 16, opacity: 0.85 }}>ქულა</div>
         </div>
-        <div className="small" style={{ marginTop: 6, opacity: 0.9, lineHeight: 1.45 }}>ქულებს იღებ კარგი ფინანსური ჩვევებისთვის და ცვლი ფასდაკლების კუპონზე.</div>
         {hardship ? (
-          <div className="small" style={{ marginTop: 8, opacity: 0.9, lineHeight: 1.45 }}>მხარდაჭერის რეჟიმში ქულები უბრალოდ ინახება და არ იწვება. გაჩვენებთ მხოლოდ აუცილებელ ხარჯს და ბიუჯეტის დახმარებას.</div>
+          <div className="small" style={{ marginTop: 8, opacity: 0.9, lineHeight: 1.45 }}>მხარდაჭერის რეჟიმში ქულები უბრალოდ ინახება და არ იწვება.</div>
         ) : nextTarget ? (
           <>
             <div className="small" style={{ marginTop: 10, opacity: 0.9 }}>შემდეგი კუპონი: {nextTarget.name} ({nextTarget.badge}). აკლია <b style={{ color: '#ffd977' }}>{nextTarget.cost - points} ქულა</b></div>
@@ -51,7 +61,6 @@ export function Points() {
         ) : (
           <div className="small" style={{ marginTop: 10, opacity: 0.9 }}>ყველა კუპონისთვის ქულა გყოფნის.</div>
         )}
-        {!hardship && <div className="tiny" style={{ marginTop: 8, opacity: 0.8 }}>ქულებს ვადა არ აქვს.</div>}
       </div>
 
       {/* my coupons: right under the balance, so a new one is visible at once */}
@@ -76,9 +85,14 @@ export function Points() {
       )}
 
       {/* interests */}
-      <div className="card">
-        <div className="h3">რა გაინტერესებს?</div>
-        <div className="small muted" style={{ marginTop: 2, lineHeight: 1.45 }}>შეთავაზებებს ვალაგებთ მხოლოდ იმის მიხედვით, რასაც აქ მონიშნავ. შენს ხარჯებს ამისთვის არ ვუყურებთ.</div>
+      <div className="card" data-info-root style={{ position: 'relative' }}>
+        <div className="between" style={{ gap: 8 }}>
+          <div className="h3">რა გაინტერესებს?</div>
+          <InfoTip>
+            <div>შეთავაზებებს ვალაგებთ მხოლოდ იმის მიხედვით, რასაც აქ მონიშნავ. შენს ხარჯებს ამისთვის არ ვუყურებთ.</div>
+            <div>სანამ არაფერს მონიშნავ, სია ფასით ლაგდება.</div>
+          </InfoTip>
+        </div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
           {INTERESTS.filter(i => !hardship || i.id === 'health' || i.id === 'save').map(i => {
             const on = interests.includes(i.id)
@@ -89,7 +103,7 @@ export function Points() {
             )
           })}
         </div>
-        {interests.length === 0 && <div className="small" style={{ marginTop: 8, color: 'var(--ink-2)', lineHeight: 1.45 }}>მონიშნე ერთი ან მეტი. მანამდე სია ფასით ლაგდება.</div>}
+        {interests.length === 0 && <div className="small" style={{ marginTop: 8, color: 'var(--ink-2)', lineHeight: 1.45 }}>მონიშნე ერთი ან მეტი.</div>}
       </div>
 
       {/* offers */}
@@ -121,27 +135,31 @@ export function Points() {
       </div>
 
       {/* how to earn */}
-      <div className="card">
-        <div className="h3">რისთვის იღებ ქულას</div>
+      <div className="card" data-info-root style={{ position: 'relative' }}>
+        <div className="between" style={{ gap: 8 }}>
+          <div className="h3">რისთვის იღებ ქულას</div>
+          <InfoTip>
+            {rules.filter(r => r.cond).map(r => <div key={r.label}>{r.main}: {r.cond}</div>)}
+          </InfoTip>
+        </div>
         <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-          {EARN_RULES.map(r => (
+          {rules.map(r => (
             <div key={r.label} className="between small" style={{ padding: '6px 0', borderBottom: '1px dashed #eee5d8', gap: 10 }}>
-              <span>{r.label}</span><b style={{ color: 'var(--good)', flexShrink: 0 }}>{r.pts}</b>
+              <span>{r.main}</span><b style={{ color: 'var(--good)', flexShrink: 0 }}>{r.pts}</b>
             </div>
           ))}
         </div>
-        <div className="small" style={{ marginTop: 12, background: '#fff7e0', borderRadius: 12, padding: '10px 12px', lineHeight: 1.5 }}>
-          ქულას ვერ მიიღებ ხარჯვით, სესხით ან აპის გახსნით.
-        </div>
+        <div className="small" style={{ marginTop: 10, fontWeight: 700, color: 'var(--ink-2)' }}>ქულას ვერ მიიღებ ხარჯვით, სესხით ან აპის გახსნით.</div>
         {(g.pointsLog ?? []).length > 0 && (
-          <>
-            <div className="tiny muted" style={{ marginTop: 12, fontWeight: 700 }}>ქულების ისტორია</div>
-            {(g.pointsLog ?? []).slice(0, 5).map((l, i) => (
-              <div key={i} className="between tiny" style={{ marginTop: 4, gap: 10 }}>
-                <span>{l.label}</span><b style={{ color: l.pts > 0 ? 'var(--good)' : 'var(--ink-2)' }}>{l.pts > 0 ? '+' : ''}{l.pts}</b>
-              </div>
-            ))}
-          </>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+            <InfoTip showLabel label="ქულების ისტორია">
+              {(g.pointsLog ?? []).slice(0, 5).map((l, i) => (
+                <div key={i} className="between" style={{ gap: 10 }}>
+                  <span>{l.label}</span><b style={{ color: l.pts > 0 ? 'var(--good)' : 'var(--ink-2)' }}>{l.pts > 0 ? '+' : ''}{l.pts}</b>
+                </div>
+              ))}
+            </InfoTip>
+          </div>
         )}
       </div>
 

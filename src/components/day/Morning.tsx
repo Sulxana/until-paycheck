@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, COSMETIC_POOL } from '../../state/store'
 import { useToday, fmt } from '../../engine/view'
 import { Jikho, JikhoMood } from '../Jikho'
-import { WeatherChip, WCOLOR } from '../ui'
+import { WeatherChip, WCOLOR, InfoTip } from '../ui'
 import { morningSet, TOPICS, LessonCtx } from '../../content/lessons'
 import { JikhoSays, Steps, QuizCard, Confetti, OnLessonAction } from './parts'
 import { useDayLocal } from './local'
@@ -160,8 +160,11 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
         </div>
       </div>
 
-      <div className="card" style={{ padding: 14 }}>
-        <div className="h3" style={{ marginBottom: 8 }}>დღეს გაიარე</div>
+      <div className="card" data-info-root style={{ padding: 14, position: 'relative' }}>
+        <div className="between" style={{ marginBottom: 8 }}>
+          <div className="h3">დღეს გაიარე</div>
+          <InfoTip>ნასწავლს 1, 3 და 7 დღის შემდეგ გავიმეორებთ — ასე უკეთ დაგამახსოვრდება.</InfoTip>
+        </div>
         <div style={{ display: 'grid', gap: 6 }}>
           {topicsToday.map(t => (
             <div key={t} className="row small" style={{ fontWeight: 600 }}>
@@ -169,7 +172,6 @@ export function Morning({ onFocus, onAction, goEvening, localKey }: { onFocus: (
             </div>
           ))}
         </div>
-        <div className="tiny muted" style={{ marginTop: 8 }}>ნასწავლს 1, 3 და 7 დღის შემდეგ გავიმეორებთ — ასე უკეთ დაგამახსოვრდება.</div>
       </div>
 
       {!gameOff && game.pendingChoice && (

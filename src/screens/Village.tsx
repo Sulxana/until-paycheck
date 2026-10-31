@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, COSMETIC_POOL } from '../state/store'
 import { usePersona } from '../engine/view'
 import { Jikho } from '../components/Jikho'
-import { Sheet } from '../components/ui'
+import { Sheet, InfoTip } from '../components/ui'
 import { RED_LINES, RED_LINES_SHOWN } from './Home'
 import type { PlaceId } from '../components/village/Places'
 import { VillageScene } from '../components/village/VillageScene'
@@ -90,13 +90,13 @@ export function Village() {
 
       {/* year map */}
       <motion.div className="pad" style={{ marginTop: 16 }} {...enter(2)}>
-        <div className="card">
-          <div className="between">
+        <div className="card" data-info-root style={{ position: 'relative' }}>
+          <div className="between" style={{ marginBottom: 14 }}>
             <div className="h3">წლის რუკა</div>
-            <span className="tag">{cycles}/12</span>
-          </div>
-          <div className="small muted" style={{ marginTop: 4, marginBottom: 14, lineHeight: 1.45 }}>
-            ყოველი გავლილი თვე რუკაზე ახალ ადგილს ხსნის.
+            <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+              <span className="tag">{cycles}/12</span>
+              <InfoTip>ყოველი გავლილი თვე რუკაზე ახალ ადგილს ხსნის.</InfoTip>
+            </div>
           </div>
           <YearMap cycles={game.cycles} />
         </div>
@@ -104,18 +104,21 @@ export function Village() {
 
       {/* wardrobe */}
       <motion.div className="pad" style={{ marginTop: 12 }} {...enter(3)}>
-        <div className="card">
+        <div className="card" data-info-root style={{ position: 'relative' }}>
           <div className="between">
             <div className="h3">ჯიხოს ნივთები</div>
-            <span className="tag">აცვია {game.equipped.length}/2</span>
+            <div className="row" style={{ gap: 6, alignItems: 'center' }}>
+              <span className="tag">აცვია {game.equipped.length}/2</span>
+              {lockedCount > 0 && (
+                <InfoTip label="როგორ მივიღო ახალი ნივთი?">
+                  <span>ახალი ნივთი — უსაფრთხო ხელფასის დღისთვის და გაკვეთილებისთვის.</span>
+                  <b style={{ color: 'var(--ink)' }}>ფულით არაფერი იყიდება.</b>
+                </InfoTip>
+              )}
+            </div>
           </div>
           <div className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>შეეხე — ჩააცვი ან გახადე.</div>
           <Wardrobe game={game} stage={stage} onToggle={toggleEquip} />
-          {lockedCount > 0 && (
-            <div className="tiny muted" style={{ marginTop: 10, lineHeight: 1.45 }}>
-              ახალი ნივთი — უსაფრთხო ხელფასის დღისთვის და გაკვეთილებისთვის. <b style={{ color: 'var(--ink)' }}>ფულით არაფერი იყიდება.</b>
-            </div>
-          )}
         </div>
       </motion.div>
 

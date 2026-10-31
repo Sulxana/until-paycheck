@@ -1,11 +1,11 @@
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, evolutionStage, ChatMsg } from '../state/store'
 import { useEngine, usePersona, gel, fmt } from '../engine/view'
 import { Jikho, JikhoMood } from '../components/Jikho'
-import { RangeBar, WEMOJI } from '../components/ui'
+import { RangeBar, WEMOJI, InfoTip } from '../components/ui'
 import { FanChart } from '../components/FanChart'
-import { respond, greeting, Ctx, START_CHIPS } from '../chat/responder'
+import { respond, greeting, Ctx, START_CHIPS, JikhoMsg } from '../chat/responder'
 import { LearnLink } from '../components/learn/LearnLink'
 import { WEATHER_LABEL, WeatherKind, weatherOf } from '../engine/engine'
 
@@ -71,9 +71,9 @@ export function Chat() {
         </div>
       </div>
 
-      <div ref={listRef} className="screen" style={{ padding: '12px 12px 6px' }}>
+      <div ref={listRef} className="screen" style={{ padding: '12px 12px 6px', isolation: 'isolate' }}>
         <AnimatePresence initial={false}>
-          {msgs.map(m => <Bubble key={m.id} m={m} stage={stage} />)}
+          {msgs.map((m, i) => <Bubble key={m.id} m={m} z={msgs.length - i} />)}
         </AnimatePresence>
         {typing && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="row" style={{ margin: '6px 0' }}>
@@ -100,15 +100,17 @@ export function Chat() {
   )
 }
 
-function Bubble({ m, stage }: { m: ChatMsg; stage: 0 | 1 | 2 | 3 }) {
+/** `z`: earlier bubbles sit above later ones, so an opened ⓘ pop-up is not covered by the next message */
+function Bubble({ m, z }: { m: ChatMsg; z: number }) {
   const mine = m.from === 'user'
+  const info = (m as JikhoMsg).info
   return (
-    <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', damping: 22, stiffness: 280 }} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start', margin: '6px 0' }}>
+    <motion.div data-info-root initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', damping: 22, stiffness: 280 }} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start', margin: '6px 0', position: 'relative', zIndex: z }}>
       <div style={{ maxWidth: '88%' }}>
         <div style={{
           background: mine ? '#1f3b57' : '#fff', color: mine ? '#fff' : 'var(--ink)', padding: '10px 13px', borderRadius: mine ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
           boxShadow: 'var(--shadow-sm)', fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-line',
-        }}>{m.text}</div>
+        }}>{m.text}{info && <span style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 4 }}><InfoTip>{info}</InfoTip></span>}</div>
         {m.card && <div style={{ marginTop: 6 }}><Card card={m.card} /></div>}
       </div>
     </motion.div>
@@ -133,13 +135,20 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
   if (card.kind === 'installment') {
     const cmp = d.compare
     return (
-      <div className="card" style={{ padding: 14 }}>
-        <div className="small" style={{ fontWeight: 800, marginBottom: 6 }}>{d.title}</div>
-        <div className="row tiny muted" style={{ gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span>ხელფასამდე ამინდი:</span>
-          {(['sun', 'cloud', 'rain', 'storm'] as const).map(w => (
-            <span key={w} className="row" style={{ gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: STRIP_COLOR[w] }} />{WEATHER_LABEL[w]}</span>
-          ))}
+      <div className="card" data-info-root style={{ padding: 14, position: 'relative' }}>
+        <div className="between" style={{ gap: 8, alignItems: 'flex-start', marginBottom: 10 }}>
+          <div className="small" style={{ fontWeight: 800 }}>{d.title}</div>
+          <InfoTip>
+            <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+              <span>ხელფასამდე ამინდი:</span>
+              {(['sun', 'cloud', 'rain', 'storm'] as const).map(w => (
+                <span key={w} className="row" style={{ gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: 4, background: STRIP_COLOR[w] }} />{WEATHER_LABEL[w]}</span>
+              ))}
+            </div>
+            {d.note && <div>{d.note}</div>}
+            {d.rows.filter((r: any) => r.eir > 0).map((r: any) => <div key={r.label}>{r.label}: ეფექტური წლიური {fmt(r.eir, 1)}%</div>)}
+            <div className="muted tiny">შორეული თვეები მიახლოებითია.</div>
+          </InfoTip>
         </div>
         {cmp && (
           <div style={{ marginBottom: 12 }}>
@@ -184,20 +193,20 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
             </div>
           ))}
         </div>
-        {d.note && <div className="tiny muted" style={{ marginTop: 8 }}>{d.note}</div>}
-        <Info>
-          {d.rows.filter((r: any) => r.eir > 0).map((r: any) => <div key={r.label}>{r.label}: ეფექტური წლიური {fmt(r.eir, 1)}%</div>)}
-          <div>შორეული თვეები მიახლოებითია.</div>
-        </Info>
         <LearnLink topic="M3" text="რატომ ძვირდება გრძელი ვადა?" compact />
       </div>
     )
   }
   if (card.kind === 'forecast') {
     return (
-      <div className="card" style={{ padding: 12 }}>
+      <div className="card" data-info-root style={{ padding: 12, position: 'relative' }}>
         <FanChart data={d.fan} cushion={d.cushion} height={150} />
-        <div className="tiny muted">ცისფერი ზოლი — სად შეიძლება აღმოჩნდე. მუქი ხაზი — ყველაზე სავარაუდო.</div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <InfoTip>
+            <div><b>ცისფერი ზოლი</b> — სად შეიძლება აღმოჩნდე.</div>
+            <div><b>მუქი ხაზი</b> — ყველაზე სავარაუდო.</div>
+          </InfoTip>
+        </div>
       </div>
     )
   }
@@ -211,8 +220,11 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
   }
   if (card.kind === 'concept') {
     return (
-      <div className="card" style={{ padding: 14, background: 'linear-gradient(135deg,#fff,#f6f1ff)' }}>
-        <div className="h3">{d.title}</div>
+      <div className="card" data-info-root style={{ padding: 14, background: 'linear-gradient(135deg,#fff,#f6f1ff)', position: 'relative' }}>
+        <div className="between" style={{ gap: 8, alignItems: 'flex-start' }}>
+          <div className="h3">{d.title}</div>
+          {d.more && <InfoTip>{d.more}</InfoTip>}
+        </div>
         <div className="small" style={{ marginTop: 8, background: '#fff7e0', borderRadius: 10, padding: '8px 10px' }}><b>შენთვის:</b> {d.mine}</div>
         <div className="small" style={{ marginTop: 6 }}><b>წესი:</b> {d.rule}</div>
       </div>
@@ -234,17 +246,6 @@ function Strip({ rows, cushion, labels }: { rows: { label: string; p50: number; 
           {labels && <div style={{ fontSize: 9.5, color: '#8193a5', marginTop: 2 }}>{r.label.split(' ')[1]}</div>}
         </motion.div>
       ))}
-    </div>
-  )
-}
-
-/** small ⓘ toggle: the extra detail opens inline */
-function Info({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div style={{ marginTop: 6 }}>
-      <button onClick={() => setOpen(o => !o)} className="tiny muted" style={{ background: 'none', padding: 0, fontWeight: 700 }} aria-expanded={open}>ⓘ {open ? 'დამალვა' : 'დეტალები'}</button>
-      {open && <div className="tiny muted" style={{ marginTop: 4, display: 'grid', gap: 2 }}>{children}</div>}
     </div>
   )
 }

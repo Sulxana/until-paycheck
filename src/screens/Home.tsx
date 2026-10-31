@@ -4,7 +4,7 @@ import { useStore, evolutionStage, LANDMARKS, COSMETIC_POOL, STREAK_GOAL, STREAK
 import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { RoadScene } from '../components/RoadScene'
 import { Jikho, JikhoMood } from '../components/Jikho'
-import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI, WCOLOR, InfoButton, InfoBox } from '../components/ui'
+import { Sheet, PhonePortal, RangeBar, WeatherChip, Disclaimer, BankChip, WEMOJI, WCOLOR, InfoTip } from '../components/ui'
 import { BANK_META, PERSONAS } from '../engine/personas'
 import { WeatherKind, WEATHER_LABEL } from '../engine/engine'
 import { TowerPlace } from '../components/village/Places'
@@ -46,7 +46,6 @@ export function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [streakOpen, setStreakOpen] = useState(false)
   const [preview, setPreview] = useState<WeatherKind | null>(null)
-  const [infoOpen, setInfoOpen] = useState(false)
   const stage = evolutionStage(game)
   const weather = preview ?? v.weather
   const idx = e.demoPathIndex()
@@ -122,10 +121,11 @@ export function Home() {
 
       {/* forecast card */}
       <div className="pad" style={{ marginTop: -44, position: 'relative', zIndex: 2 }}>
-        <motion.div className="card" layout style={{ padding: 18 }}>
+        <motion.div className="card" data-info-root layout style={{ padding: 18, position: 'relative' }}>
           {v.hardship && (
-            <div style={{ background: '#eef2f7', borderRadius: 14, padding: '10px 12px', marginBottom: 12, fontSize: 13 }}>
-              ❄️ <b>მხარდაჭერის რეჟიმი:</b> არაფერი იკარგება. ჯიხო გაჩვენებს, რომელი გადასახადი დაფარო პირველად და როგორ ესაუბრო ბანკს.
+            <div className="between" style={{ background: '#eef2f7', borderRadius: 14, padding: '8px 8px 8px 12px', marginBottom: 12, fontSize: 13, gap: 8 }}>
+              <span>❄️ <b>მხარდაჭერის რეჟიმი:</b> არაფერი იკარგება.</span>
+              <InfoTip label="როგორ დაგეხმარება ჯიხო?">ჯიხო გაჩვენებს, რომელი გადასახადი დაფარო პირველად და როგორ ესაუბრო ბანკს.</InfoTip>
             </div>
           )}
           <div className="between">
@@ -139,14 +139,16 @@ export function Home() {
             <>
               <div className="row" style={{ marginTop: 10, gap: 6, alignItems: 'center' }}>
                 <WeatherChip w={v.weather} p={v.landing.inTen / 10} />
-                <InfoButton open={infoOpen} onClick={() => setInfoOpen(o => !o)} />
               </div>
               <RangeBar p10={v.landing.p10} p50={v.landing.p50} p90={v.landing.p90} cushion={e.cushion} mid={false} />
-              <InfoBox open={infoOpen}>
-                <div>ზოლი — სად შეიძლება აღმოჩნდე: {span(r10(v.landing.p10), r10(v.landing.p90))}</div>
-                <div>ზღვარი ({gel(e.cushion)}) — უსაფრთხო მარაგი, შენი 3 დღის ხარჯი.</div>
-                <div className="muted">{p.historyMonths} თვის ისტორიიდან · სიზუსტე {'●'.repeat(p.confidence)}{'○'.repeat(5 - p.confidence)}</div>
-              </InfoBox>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                <InfoTip showLabel>
+                  <div><b>ლურჯი ზოლი</b> — სად შეიძლება აღმოჩნდე: {span(r10(v.landing.p10), r10(v.landing.p90))}</div>
+                  <div><b>მუქი ნიშანი</b> — ყველაზე სავარაუდო თანხა.</div>
+                  <div><b>ზღვარი ({gel(e.cushion)})</b> — უსაფრთხო მარაგი, შენი 3 დღის ხარჯი.</div>
+                  <div className="muted tiny">{p.historyMonths} თვის ისტორიიდან · სიზუსტე {'●'.repeat(p.confidence)}{'○'.repeat(5 - p.confidence)}</div>
+                </InfoTip>
+              </div>
             </>
           )}
         </motion.div>
@@ -185,7 +187,7 @@ export function Home() {
       </div>
 
       {/* banks */}
-      <div className="pad" style={{ marginTop: 16 }}>
+      <div className="pad" data-info-root style={{ marginTop: 16, position: 'relative' }}>
         <div className="between" style={{ marginBottom: 8 }}>
           <span className="small" style={{ fontWeight: 800 }}>ახლა ანგარიშებზე: {gel(Math.round(v.balance))}</span>
           <span className="tag">{p.balances.length + (p.savings ? 1 : 0)} ბანკის ამონაწერიდან</span>
@@ -364,10 +366,15 @@ function StreakSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
                 style={{ height: 14, borderRadius: 7, background: i < lit ? '#ffb02e' : '#ece6dc' }} />
             ))}
           </div>
-          <div className="small" style={{ fontWeight: 700 }}>
-            {left === 0 ? <>15 დღე შესრულდა: <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულა</b></> : <>კიდევ {left} დღე და მიიღებ <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულას</b></>}
+          <div data-info-root className="row" style={{ position: 'relative', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+            <div className="small" style={{ fontWeight: 700 }}>
+              {left === 0 ? <>{STREAK_GOAL} დღე შესრულდა: <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულა</b></> : <>კიდევ {left} დღე და მიიღებ <b style={{ color: 'var(--good)' }}>⭐ +{STREAK_BONUS} ქულას</b></>}
+            </div>
+            <InfoTip label="როგორ იზრდება სერია?">
+              <div>სერია იზრდება, როცა დილის 3 კითხვას გაივლი.</div>
+              {game.freezes > 0 && <div>თუ დღე გამოგრჩა, ❄ {game.freezes} დაცვის დღე სერიას შეინახავს.</div>}
+            </InfoTip>
           </div>
-          <div className="tiny muted" style={{ lineHeight: 1.5 }}>სერია იზრდება, როცა დილის 3 კითხვას გაივლი.{game.freezes > 0 ? ` თუ დღე გამოგრჩა, ❄ ${game.freezes} დაცვის დღე სერიას შეინახავს.` : ''}</div>
           {game.litToday
             ? <div className="small" style={{ color: 'var(--good)', fontWeight: 700 }}>✓ დღეს უკვე ანთია</div>
             : <button className="pill-btn btn-sun" onClick={() => { onClose(); setTab('day') }}>დილის 3 კითხვა</button>}
@@ -384,8 +391,11 @@ function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Sheet open={open} onClose={onClose}>
       <div className="h2">პარამეტრები</div>
-      <div className="card between" style={{ marginTop: 12 }}>
-        <div><div className="h3">თამაშის გამორთვა</div><div className="small muted">პროგნოზი, შემოწმება და გაკვეთილები ისევ იმუშავებს</div></div>
+      <div className="card between" data-info-root style={{ marginTop: 12, position: 'relative' }}>
+        <div className="row" style={{ alignItems: 'center', gap: 6 }}>
+          <div className="h3">თამაშის გამორთვა</div>
+          <InfoTip label="რა რჩება გამორთვის შემდეგ?">პროგნოზი, შემოწმება და გაკვეთილები ისევ იმუშავებს.</InfoTip>
+        </div>
         <button onClick={() => setGameOff(!gameOff)} style={{ width: 52, height: 30, borderRadius: 15, background: gameOff ? '#1f3b57' : '#d9d0c2', position: 'relative' }}>
           <motion.span animate={{ x: gameOff ? 22 : 0 }} style={{ position: 'absolute', top: 3, left: 3, width: 24, height: 24, borderRadius: 12, background: '#fff' }} />
         </button>
@@ -438,14 +448,16 @@ function Ceremony() {
 
           <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
             {c.safe && (
-              <motion.div className="card row" initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }} style={{ gap: 16 }}>
+              <motion.div className="card row" data-info-root initial={{ x: -30, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.5 }} style={{ gap: 16, position: 'relative' }}>
                 <div style={{ width: 92, height: 160, borderRadius: 18, overflow: 'hidden', background: 'linear-gradient(180deg,#8fd0ff,#e4f5ff 70%,#9fd39c 70%)', flexShrink: 0 }}>
                   <svg viewBox="-4 70 84 156" width="92" height="160"><TowerPlace stones={game.stones} /></svg>
                 </div>
-                <div>
-                  <div className="h3">კოშკს ახალი ქვა დაემატა</div>
+                <div style={{ flex: 1 }}>
+                  <div className="between" style={{ alignItems: 'flex-start', gap: 6 }}>
+                    <div className="h3">კოშკს ახალი ქვა დაემატა</div>
+                    <InfoTip label="როდის დასრულდება კოშკი?">12 ქვაზე კოშკი დასრულდება.</InfoTip>
+                  </div>
                   <div style={{ fontSize: 34, fontWeight: 800, margin: '4px 0' }}>{game.stones}<span className="muted" style={{ fontSize: 18 }}>/12</span></div>
-                  <div className="small muted">12 ქვაზე კოშკი დასრულდება.</div>
                   <div className="small" style={{ marginTop: 6, fontWeight: 700 }}>{landmark.icon} ახალი ადგილი: {landmark.name}</div>
                 </div>
               </motion.div>
@@ -457,9 +469,15 @@ function Ceremony() {
               </motion.div>
             )}
             {!c.safe && (
-              <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-                <div className="h3">რა ვერ გავითვალისწინეთ</div>
-                <div className="small" style={{ marginTop: 4 }}>{v.extra > 0 ? `ამ თვეში ${gel(v.extra)}-ის შესყიდვა ჩაიწერა. პროგნოზი ამას წინასწარ ვერ ხედავდა.` : 'მოულოდნელი ხარჯი, რომელიც ისტორიაში არ ჩანდა.'} შემდეგ თვეს პროგნოზს უფრო ფრთხილად დავთვლით.</div>
+              <motion.div className="card" data-info-root initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} style={{ position: 'relative' }}>
+                <div className="between" style={{ gap: 6 }}>
+                  <div className="h3">რა ვერ გავითვალისწინეთ</div>
+                  <InfoTip label="რას ვცვლით შემდეგ თვეს?">
+                    {v.extra > 0 && <div>პროგნოზი ამ შესყიდვას წინასწარ ვერ ხედავდა.</div>}
+                    <div>შემდეგ თვეს პროგნოზს უფრო ფრთხილად დავთვლით.</div>
+                  </InfoTip>
+                </div>
+                <div className="small" style={{ marginTop: 4 }}>{v.extra > 0 ? `ამ თვეში ${gel(v.extra)}-ის შესყიდვა ჩაიწერა.` : 'მოულოდნელი ხარჯი, რომელიც ისტორიაში არ ჩანდა.'}</div>
               </motion.div>
             )}
             <motion.div className="card" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.1 }}>

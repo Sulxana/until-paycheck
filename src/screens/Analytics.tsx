@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useStore } from '../state/store'
 import { useToday, gel, fmt, rangeText } from '../engine/view'
 import { FanChart } from '../components/FanChart'
-import { Disclaimer } from '../components/ui'
+import { Disclaimer, InfoTip } from '../components/ui'
 import { BANK_META } from '../engine/personas'
 import { CycleRow, Engine, KA_MONTHS_FULL } from '../engine/engine'
 import { Points } from '../components/points/Points'
@@ -40,11 +40,15 @@ export function Analytics() {
 /** a card that leads with one plain sentence, then the picture, then a plain-words legend */
 function Insight({ kicker, title, children, legend }: { kicker: string; title: ReactNode; children: ReactNode; legend?: ReactNode }) {
   return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)', letterSpacing: 0.3 }}>{kicker}</div>
-      <div className="display" style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3, margin: '4px 0 12px', textWrap: 'balance' as any }}>{title}</div>
+    <div className="card" data-info-root style={{ padding: 16, position: 'relative' }}>
+      <div className="between" style={{ gap: 8, alignItems: 'flex-start' }}>
+        <div style={{ minWidth: 0 }}>
+          <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)', letterSpacing: 0.3 }}>{kicker}</div>
+          <div className="display" style={{ fontSize: 19, fontWeight: 800, lineHeight: 1.3, margin: '4px 0 12px', textWrap: 'balance' as any }}>{title}</div>
+        </div>
+        {legend && <InfoTip>{legend}</InfoTip>}
+      </div>
       {children}
-      {legend && <div className="small muted" style={{ marginTop: 10 }}>{legend}</div>}
     </div>
   )
 }
@@ -103,7 +107,11 @@ function Payday() {
 
       <Year />
 
-      <Insight kicker="გადასახადები" title="ხელფასამდე ეს გადასახადები გელის" legend="ყოველი დადასტურება პროგნოზს აზუსტებს.">
+      <Insight kicker="გადასახადები" title="ხელფასამდე ეს გადასახადები გელის" legend={<>
+        <div>ყოველი დადასტურება პროგნოზს აზუსტებს.</div>
+        {due.filter(d => d.range).map(d => <div key={d.name}><b>{d.name}</b>: თანხა იცვლება, {d.range![0]}–{d.range![1]} ₾.</div>)}
+        {due.some(d => !d.range) && <div><b>{due.filter(d => !d.range).map(d => d.name).join(', ')}</b>: ყოველთვე, ბოლო 6 თვე.</div>}
+      </>}>
         <div style={{ display: 'grid', gap: 8 }}>
           {due.map(d => {
             const amt = d.amount ?? Math.round((d.range![0] + d.range![1]) / 2)
@@ -112,7 +120,7 @@ function Payday() {
               <div key={d.name} className="between" style={{ padding: '10px 12px', borderRadius: 14, background: done ? '#f3f6f2' : '#fbf8f2', opacity: done ? 0.6 : 1 }}>
                 <div>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{d.name}</div>
-                  <div className="tiny muted">{d.date} · {BANK_META[d.bank].label} · {d.range ? `თანხა იცვლება: ${d.range[0]}–${d.range[1]} ₾` : 'ყოველთვე, ბოლო 6 თვე'}</div>
+                  <div className="tiny muted">{d.date} · {BANK_META[d.bank].label}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontWeight: 800, fontSize: 15 }}>{d.range ? '~' : ''}{gel(amt)}</div>
@@ -209,7 +217,10 @@ function Spend() {
   const top = CATS[0]
   return (
     <>
-      <Insight kicker="ყოველდღიური ხარჯი" title={<>ყველაზე მეტს <span style={{ color: 'var(--navy)' }}>{top.name.endsWith('ი') ? top.name.slice(0, -1) : top.name}ზე</span> ხარჯავ: ~{gel(Math.round((total * top.share) / 5) * 5)} თვეში</>} legend={`სულ ყოველდღიურ ხარჯზე თვეში დაახლოებით ${gel(total)} მიდის.`}>
+      <Insight kicker="ყოველდღიური ხარჯი" title={<>ყველაზე მეტს <span style={{ color: 'var(--navy)' }}>{top.name.endsWith('ი') ? top.name.slice(0, -1) : top.name}ზე</span> ხარჯავ: ~{gel(Math.round((total * top.share) / 5) * 5)} თვეში</>} legend={<>
+        <div>სულ ყოველდღიურ ხარჯზე თვეში დაახლოებით {gel(total)} მიდის.</div>
+        {CATS.map(c => <div key={c.name}><b>{c.icon} {c.name}:</b> {c.merchants.map(([m, s]) => `${m} ${fmt(Math.round(total * c.share * s))} ₾`).join(' · ')}</div>)}
+      </>}>
         <div style={{ display: 'grid', gap: 12 }}>
           {CATS.map((c, i) => (
             <div key={c.name}>
@@ -217,7 +228,6 @@ function Spend() {
               <div style={{ height: 10, borderRadius: 6, background: '#efe8dc', marginTop: 5, overflow: 'hidden' }}>
                 <motion.div initial={{ width: 0 }} animate={{ width: `${(c.share / CATS[0].share) * 100}%` }} transition={{ delay: i * 0.08 }} style={{ height: '100%', background: c.color, borderRadius: 6 }} />
               </div>
-              <div className="tiny muted" style={{ marginTop: 4 }}>{c.merchants.map(([m, s]) => `${m} ${fmt(Math.round(total * c.share * s))} ₾`).join(' · ')}</div>
             </div>
           ))}
         </div>

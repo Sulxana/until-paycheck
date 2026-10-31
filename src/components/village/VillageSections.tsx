@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Game, LANDMARKS, COSMETIC_POOL, evolutionStage, useStore, type Tab } from '../../state/store'
 import { Jikho, STAGE_NAMES } from '../Jikho'
-import { Sheet, Progress } from '../ui'
+import { Sheet, Progress, InfoTip } from '../ui'
 import {
   PlaceId, PLACE_BOX, TowerPlace, SchoolPlace, CellarPlace, StationPlace, BridgePlace, Stream,
   TOWER_MAX, BRIDGE_MAX, STATION_MAX, BOOKS_PER_TOPIC, INSTRUMENTS, jarPct,
@@ -181,13 +181,13 @@ export function PlaceSheet({ place, game, calm = false, onClose }: { place: Plac
   return (
     <Sheet open={!!place} onClose={onClose}>
       <Hero key={id} id={id} game={game} />
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+      <motion.div data-info-root initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} style={{ position: 'relative' }}>
         <div className="between" style={{ marginTop: 14 }}>
           <div className="h2">{TITLES[id]}</div>
-          <button onClick={onClose} aria-label="დახურვა" className="muted" style={{ fontSize: 18, fontWeight: 700, padding: '2px 6px' }}>✕</button>
-        </div>
-        <div style={{ fontSize: 14, lineHeight: 1.55, marginTop: 6, color: 'var(--ink-2)' }}>
-          <b style={{ color: 'var(--ink)' }}>რა ზრდის: </b>{GROWS[id]}
+          <div className="row" style={{ gap: 4, alignItems: 'center' }}>
+            <InfoTip showLabel label="რა ზრდის?">{GROWS[id]}</InfoTip>
+            <button onClick={onClose} aria-label="დახურვა" className="muted" style={{ fontSize: 18, fontWeight: 700, padding: '2px 6px' }}>✕</button>
+          </div>
         </div>
         <PlaceBody id={id} game={game} calm={calm} />
         <button className="pill-btn btn-ghost" style={{ marginTop: 14 }} onClick={go}>{act.label} ›</button>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore, CHECK_MAX } from '../state/store'
 import { useToday } from '../engine/view'
-import { Sheet } from '../components/ui'
+import { Sheet, InfoTip } from '../components/ui'
 import { Morning } from '../components/day/Morning'
 import { Evening } from '../components/day/Evening'
 import { BeatCard, QuestsCard, beatNumbers } from '../components/day/Weekly'
@@ -78,10 +78,13 @@ export function Day() {
         )}
 
         {/* knowledge score */}
-        <div className="card" style={{ marginTop: 12, padding: 16, background: 'linear-gradient(135deg,#ffffff,#eef6ff)' }}>
+        <div className="card" data-info-root style={{ marginTop: 12, padding: 16, background: 'linear-gradient(135deg,#ffffff,#eef6ff)', position: 'relative' }}>
           <div className="between" style={{ alignItems: 'flex-start' }}>
             <div style={{ flex: 1 }}>
-              <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)' }}>ცოდნის ქულა</div>
+              <div className="row" style={{ gap: 4 }}>
+                <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)' }}>ცოდნის ქულა</div>
+                <InfoTip>6 კითხვა: პროცენტი, ინფლაცია, რისკი, სესხის ფასი, PTI, თაღლითობა.</InfoTip>
+              </div>
               {latest ? (
                 <div className="display" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.3, marginTop: 2 }}>
                   {latest.score > first.score ? <>გაიზარდა: {first.score} → <span style={{ color: 'var(--good)' }}>{latest.score}</span> ({CHECK_MAX}-დან)</> : <>{latest.score}/{CHECK_MAX}</>}
@@ -89,7 +92,6 @@ export function Day() {
               ) : (
                 <div className="display" style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.3, marginTop: 2 }}>პირველი შედეგი: {first.score}/{CHECK_MAX}. ახლა რამდენი იქნება?</div>
               )}
-              <div className="small muted" style={{ marginTop: 4 }}>6 კითხვა: პროცენტი, ინფლაცია, რისკი, სესხის ფასი, PTI, თაღლითობა.</div>
             </div>
             <div className="row" style={{ gap: 6, alignItems: 'flex-end' }}>
               <MiniBar score={first.score} color="#9fb4c7" />
@@ -124,12 +126,14 @@ export function Day() {
       {!focus && (
         <>
           {/* knowledge map */}
-          <div className="pad" style={{ marginTop: 18 }}>
+          <div className="pad" data-info-root style={{ marginTop: 18, position: 'relative' }}>
             <div className="between">
-              <div className="h3">ცოდნის რუკა</div>
+              <div className="row" style={{ gap: 4 }}>
+                <div className="h3">ცოდნის რუკა</div>
+                <InfoTip>შეეხე თემას და გაიარე 30-წამიანი გაკვეთილი შენივე რიცხვებით.</InfoTip>
+              </div>
               <span className="tag">{mastered}/9 ათვისებული</span>
             </div>
-            <div className="small muted" style={{ marginTop: 2 }}>შეეხე თემას და გაიარე 30-წამიანი გაკვეთილი შენივე რიცხვებით.</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 10 }}>
               {ORDER.map((t, i) => {
                 const m = game.mastery[t] ?? 0
@@ -165,12 +169,19 @@ export function Day() {
 
           {/* what we measure */}
           <div className="pad" style={{ marginTop: 12 }}>
-            <div className="card" style={{ background: '#1f3b57', color: '#fff' }}>
-              <div className="h3" style={{ color: '#fff' }}>რას ვზომავთ</div>
+            <div className="card" data-info-root style={{ background: '#1f3b57', color: '#fff', position: 'relative' }}>
+              <div className="between">
+                <div className="h3" style={{ color: '#fff' }}>რას ვზომავთ</div>
+                <InfoTip>
+                  <div><b>ცოდნა:</b> ერთი და იგივე კითხვები — დასაწყისში და მოგვიანებით.</div>
+                  <div><b>საკუთარი ხარჯის შეფასება:</b> რამდენად ზუსტად ხვდები, რამდენს დახარჯავ.</div>
+                  <div><b>კარგი ჩასვლები:</b> თვეები, როცა ხელფასის დღეს უსაფრთხო ზღვარზე მეტი დაგრჩა.</div>
+                </InfoTip>
+              </div>
               <div style={{ display: 'grid', gap: 10, marginTop: 10 }}>
-                <Measure label="ცოდნა" value={latest ? `${first.score} → ${latest.score} / ${CHECK_MAX}` : `${first.score} / ${CHECK_MAX}`} note="ერთი და იგივე კითხვები — დასაწყისში და მოგვიანებით" />
-                <Measure label="საკუთარი ხარჯის შეფასება" value={game.beatGuess !== null ? `${Math.abs(game.beatGuess - beatNumbers(v.e.medianDaily).actual)} ₾-ით ასცდი` : 'კვირის გამოწვევის შემდეგ'} note="რამდენად ზუსტად ხვდები, რამდენს დახარჯავ" />
-                <Measure label="კარგი ჩასვლები" value={`${game.stones} / ${game.cycles} თვე`} note="თვეები, როცა ხელფასის დღეს უსაფრთხო ზღვარზე მეტი დაგრჩა" />
+                <Measure label="ცოდნა" value={latest ? `${first.score} → ${latest.score} / ${CHECK_MAX}` : `${first.score} / ${CHECK_MAX}`} />
+                <Measure label="საკუთარი ხარჯის შეფასება" value={game.beatGuess !== null ? `${Math.abs(game.beatGuess - beatNumbers(v.e.medianDaily).actual)} ₾-ით ასცდი` : 'კვირის გამოწვევის შემდეგ'} />
+                <Measure label="კარგი ჩასვლები" value={`${game.stones} / ${game.cycles} თვე`} />
               </div>
               <div className="small" style={{ marginTop: 12, opacity: 0.85 }}>დასრულებულ გაკვეთილებს არ ვითვლით. ვითვლით, რა შეიცვალა.</div>
             </div>
@@ -224,10 +235,10 @@ function Ring({ value, icon }: { value: number; icon: string }) {
   )
 }
 
-function Measure({ label, value, note }: { label: string; value: string; note: string }) {
+function Measure({ label, value }: { label: string; value: string }) {
   return (
     <div className="between" style={{ alignItems: 'flex-start', gap: 10 }}>
-      <div><div style={{ fontWeight: 800, fontSize: 14 }}>{label}</div><div className="tiny" style={{ opacity: 0.75 }}>{note}</div></div>
+      <div style={{ fontWeight: 800, fontSize: 14 }}>{label}</div>
       <div style={{ fontWeight: 800, color: '#ffd977', whiteSpace: 'nowrap', fontSize: 14 }}>{value}</div>
     </div>
   )

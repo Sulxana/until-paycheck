@@ -5,6 +5,7 @@ import { useToday, fmt, gel } from '../../engine/view'
 import { Jikho, JikhoMood } from '../Jikho'
 import { eveningRecall, LessonCtx } from '../../content/lessons'
 import { JikhoSays, Steps, QuizCard, OnLessonAction } from './parts'
+import { InfoTip } from '../ui'
 import { useDayLocal } from './local'
 
 /** დეტერმინისტული „დღევანდელი ხარჯი": მედიანური დღე × დღის კოეფიციენტი */
@@ -94,10 +95,13 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
   // ---------------------------------------------------------------- steps
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <div className="card" style={{ padding: 14, background: 'linear-gradient(150deg,#e7ecf6,#ffffff 70%)' }}>
+      <div className="card" data-info-root style={{ padding: 14, background: 'linear-gradient(150deg,#e7ecf6,#ffffff 70%)', position: 'relative' }}>
         <div className="between">
           <span className="tag" style={{ background: '#fff' }}>დღის დახურვა · 40 წამი</span>
-          <span className="tiny muted">არასავალდებულო · გამოგადგება, თუ ნაღდით იხდი</span>
+          <span className="row" style={{ gap: 4 }}>
+            <span className="tiny muted">არასავალდებულო</span>
+            <InfoTip>გამოგადგება, თუ ნაღდით იხდი.</InfoTip>
+          </span>
         </div>
         <div className="row" style={{ alignItems: 'baseline', gap: 8, marginTop: 10 }}>
           <span style={{ fontSize: 15, fontWeight: 700 }}>დღეს დახარჯე:</span>
@@ -114,10 +118,12 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
 
       <AnimatePresence mode="wait">
         {step === 0 && (
-          <motion.div key="cash" className="card" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }}>
-            <div className="tag" style={{ display: 'inline-block', marginBottom: 8 }}>ნაღდი ფული</div>
+          <motion.div key="cash" className="card" data-info-root initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} style={{ position: 'relative' }}>
+            <div className="between" style={{ marginBottom: 8 }}>
+              <span className="tag">ნაღდი ფული</span>
+              <InfoTip>ნაღდ ხარჯს ბანკი ვერ ხედავს — ერთი შეხება საკმარისია.</InfoTip>
+            </div>
             <div style={{ fontSize: 18, fontWeight: 800 }}>ბანკომატიდან 50 ₾ გამოიტანე — რაზე დახარჯე?</div>
-            <div className="small muted" style={{ marginTop: 2 }}>ნაღდ ხარჯს ბანკი ვერ ხედავს — ერთი შეხება საკმარისია.</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
               {CASH_TAGS.map(t => {
                 const on = cash === t.id
@@ -151,10 +157,12 @@ export function Evening({ onFocus, onAction, localKey }: { onFocus: (f: boolean)
 
         {step === 2 && (
           <motion.div key="bolt" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -40 }} style={{ display: 'grid', gap: 12 }}>
-            <div className="card">
-              <div className="tag" style={{ display: 'inline-block', marginBottom: 8, background: '#e9f3fc', color: '#2c6aa0' }}>ადრეული შემჩნევა</div>
+            <div className="card" data-info-root style={{ position: 'relative' }}>
+              <div className="between" style={{ marginBottom: 8 }}>
+                <span className="tag" style={{ background: '#e9f3fc', color: '#2c6aa0' }}>ადრეული შემჩნევა</span>
+                <InfoTip>შენი პასუხით პროგნოზი უფრო ზუსტი გახდება.</InfoTip>
+              </div>
               <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.35 }}>ამ თვეში Bolt-ში 2-ჯერ გადაიხადე ~8 ₾. ეს ხარჯი ყოველთვე გექნება?</div>
-              <div className="small muted" style={{ marginTop: 4 }}>შენი პასუხით პროგნოზი უფრო ზუსტი გახდება.</div>
               {boltConfirmed || bolt ? (
                 <div className="small" style={{ marginTop: 12, fontWeight: 700, color: 'var(--good)' }}>
                   {bolt === 'no' ? '✓ ჩაიწერა: ერთჯერადი ხარჯია, პროგნოზს არ დაემატება.' : '✓ დადასტურდა: Bolt პროგნოზს ყოველთვიურ ხარჯად დაემატა.'}

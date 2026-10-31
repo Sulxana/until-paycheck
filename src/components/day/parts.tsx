@@ -1,3 +1,4 @@
+import { InfoIcon } from '../ui'
 import { useState, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Jikho, JikhoMood, Accessory } from '../Jikho'
@@ -124,8 +125,8 @@ export function QuizCard({ item, label, onAnswer, onNext, nextLabel, onAction }:
               </div>
               <div className="small" style={{ marginTop: 6, lineHeight: 1.5, color: 'var(--ink)' }}>
                 {whyFirst}{' '}
-                <button className="tiny" style={{ color: 'var(--sky)', fontWeight: 800 }} onClick={() => setMore(m => !m)} aria-expanded={more}>
-                  {more ? 'მოკლედ' : 'ვრცლად ⓘ'}
+                <button className="tiny" style={{ color: 'var(--sky)', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 4, verticalAlign: 'middle' }} onClick={() => setMore(m => !m)} aria-expanded={more}>
+                  {more ? 'მოკლედ' : <><InfoIcon size={15} /> ვრცლად</>}
                 </button>
               </div>
               {more && (

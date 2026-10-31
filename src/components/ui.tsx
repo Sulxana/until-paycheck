@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export function PhonePortal({ children }: { children: ReactNode }) {
@@ -56,22 +56,58 @@ export function WeatherChip({ w, p }: { w: WeatherKind; p?: number }) {
   )
 }
 
-/** small ⓘ toggle; pair it with <InfoBox open> to reveal the hidden details inline */
-export function InfoButton({ open, onClick, label = 'დეტალები' }: { open: boolean; onClick: () => void; label?: string }) {
+/** a drawn info mark: a round badge with a clear "i" (no font glyph, so it looks the same everywhere) */
+export function InfoIcon({ on = false, size = 18 }: { on?: boolean; size?: number }) {
+  const ink = on ? '#fff' : '#1f3b57'
   return (
-    <button onClick={onClick} aria-label={label} aria-expanded={open} title={label}
-      style={{ width: 24, height: 24, borderRadius: 12, flexShrink: 0, display: 'inline-grid', placeItems: 'center', fontSize: 14, fontWeight: 800, color: open ? '#fff' : 'var(--ink-3)', background: open ? '#1f3b57' : '#f2ede4' }}>ⓘ</button>
+    <svg width={size} height={size} viewBox="0 0 20 20" aria-hidden="true" style={{ flexShrink: 0, display: 'block' }}>
+      <circle cx="10" cy="10" r="9" fill={on ? '#1f3b57' : '#eef3f8'} stroke={on ? '#1f3b57' : '#c9d6e3'} strokeWidth="1.4" />
+      <circle cx="10" cy="5.8" r="1.4" fill={ink} />
+      <rect x="8.8" y="8.4" width="2.4" height="6.8" rx="1.2" fill={ink} />
+    </svg>
   )
 }
-export function InfoBox({ open, children }: { open: boolean; children: ReactNode }) {
+
+/**
+ * info button + pop-up bubble. The bubble spans the nearest element marked data-info-root
+ * (give that card position: relative) and closes on any tap outside it.
+ */
+export function InfoTip({ children, label = 'რას ნიშნავს?', showLabel = false }: { children: ReactNode; label?: string; showLabel?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [top, setTop] = useState(0)
+  const btn = useRef<HTMLButtonElement>(null)
+  const pop = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (ev: PointerEvent) => {
+      const t = ev.target as Node
+      if (!pop.current?.contains(t) && !btn.current?.contains(t)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [open])
+  const toggle = () => {
+    const b = btn.current
+    const root = b?.closest('[data-info-root]') as HTMLElement | null
+    if (b && root) setTop(b.getBoundingClientRect().bottom - root.getBoundingClientRect().top + 8)
+    setOpen(o => !o)
+  }
   return (
-    <AnimatePresence initial={false}>
-      {open && (
-        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
-          <div className="tiny" style={{ marginTop: 8, padding: '8px 10px', borderRadius: 10, background: '#f6f2ea', color: 'var(--ink-2)', display: 'grid', gap: 3 }}>{children}</div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <>
+      <button ref={btn} onClick={toggle} aria-expanded={open} aria-label={label} title={label}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, borderRadius: 999, padding: showLabel ? '4px 10px 4px 4px' : 3, background: open ? '#e3ebf3' : showLabel ? '#f3f6fa' : 'transparent', color: 'var(--navy)', fontSize: 12.5, fontWeight: 700, lineHeight: 1 }}>
+        <InfoIcon on={open} />
+        {showLabel && label}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div ref={pop} role="dialog" initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.16 }}
+            style={{ position: 'absolute', left: 12, right: 12, top, zIndex: 15, background: '#fff', borderRadius: 14, padding: '10px 12px', boxShadow: '0 12px 32px rgba(31,59,87,0.2)', border: '1px solid #e3ebf3', fontSize: 13, lineHeight: 1.5, color: 'var(--ink-2)', display: 'grid', gap: 4, textAlign: 'left', fontWeight: 500 }}>
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 

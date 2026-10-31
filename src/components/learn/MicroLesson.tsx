@@ -1,9 +1,21 @@
+import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { MICRO, Visual } from '../../content/learn'
 import { TOPICS, TopicId } from '../../content/lessons'
 import { useToday, gel, fmt } from '../../engine/view'
 import { useStore } from '../../state/store'
 import { annuity } from '../../engine/engine'
+import { InfoTip } from '../ui'
+
+/** visual's header line + the legend behind the info icon */
+function Head({ children, legend }: { children: ReactNode; legend: ReactNode }) {
+  return (
+    <div className="between" style={{ alignItems: 'flex-start', gap: 8 }}>
+      <div style={{ minWidth: 0 }}>{children}</div>
+      <InfoTip>{legend}</InfoTip>
+    </div>
+  )
+}
 
 /** "ისწავლე" screen: one picture in the user's own numbers, 2–3 short points, one rule. */
 export function MicroLesson({ topic, onDone, doneLabel = 'გასაგებია', kicker = '30-წამიანი გაკვეთილი' }: { topic: TopicId; onDone: () => void; doneLabel?: string; kicker?: string }) {
@@ -15,7 +27,7 @@ export function MicroLesson({ topic, onDone, doneLabel = 'გასაგებ�
         <div className="tiny" style={{ fontWeight: 800, color: 'var(--sky)', letterSpacing: 0.3 }}>{kicker}</div>
         <div className="display" style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.25, marginTop: 2 }}>{TOPICS[topic].icon} {m.title}</div>
       </div>
-      <div style={{ background: '#f6f9fc', borderRadius: 16, padding: 14 }}>
+      <div data-info-root style={{ background: '#f6f9fc', borderRadius: 16, padding: 14, position: 'relative' }}>
         <LessonVisual v={m.visual} />
       </div>
       <div style={{ display: 'grid', gap: 8 }}>
@@ -53,13 +65,14 @@ export function LessonVisual({ v }: { v: Visual }) {
     const va = Math.round((e.monthlyVarMedian / p.salary) * 100)
     return (
       <div style={{ display: 'grid', gap: 8 }}>
-        <div className="small" style={{ fontWeight: 800 }}>{p.name}ს ხელფასი: {gel(p.salary)}</div>
+        <Head legend={<>მუქი — ფიქსირებული ხარჯი ({gel(e.fixedTotal)}) · ცისფერი — ყოველდღიური ხარჯი · მწვანე — რჩება</>}>
+          <div className="small" style={{ fontWeight: 800 }}>{p.name}ს ხელფასი: {gel(p.salary)}</div>
+        </Head>
         <div style={{ display: 'flex', height: 34, borderRadius: 10, overflow: 'hidden' }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${f}%` }} transition={{ duration: 0.8 }} style={{ background: '#1f3b57', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 13 }}>{f}%</motion.div>
           <motion.div initial={{ width: 0 }} animate={{ width: `${va}%` }} transition={{ duration: 0.8, delay: 0.3 }} style={{ background: '#5aa9e6', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 13 }}>{va}%</motion.div>
           <div style={{ flex: 1, background: '#6fbf73' }} />
         </div>
-        <div className="tiny muted">მუქი — ფიქსირებული ხარჯი ({gel(e.fixedTotal)}) · ცისფერი — ყოველდღიური ხარჯი · მწვანე — რჩება</div>
       </div>
     )
   }
@@ -69,13 +82,14 @@ export function LessonVisual({ v }: { v: Visual }) {
     const n = Math.max(days, left)
     return (
       <div style={{ display: 'grid', gap: 8 }}>
-        <div className="small"><b>~{gel(Math.round(t.balance))}</b> ÷ <b>~{gel(Math.round(e.avgDaily))}</b> დღეში = <b>{Math.round(t.balance / e.avgDaily)} დღის ხარჯი</b></div>
+        <Head legend={<>ცისფერი — დღეები ხელფასამდე ({left}). ხელფასის დღისთვის დარჩება ~{gel(Math.round(t.landing.p50 / 10) * 10)}, ანუ დაახლოებით {days} დღის ხარჯი. უსაფრთხო ზღვარი: {gel(e.cushion)}.</>}>
+          <div className="small"><b>~{gel(Math.round(t.balance))}</b> ÷ <b>~{gel(Math.round(e.avgDaily))}</b> დღეში = <b>{Math.round(t.balance / e.avgDaily)} დღის ხარჯი</b></div>
+        </Head>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {Array.from({ length: Math.min(n, 16) }).map((_, i) => (
             <motion.span key={i} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: i * 0.05 }} style={{ width: 18, height: 18, borderRadius: 6, background: i < left ? '#5aa9e6' : '#d7e3ee', border: i === left - 1 ? '2px solid #1f3b57' : 'none' }} />
           ))}
         </div>
-        <div className="tiny muted">ცისფერი — დღეები ხელფასამდე ({left}). ხელფასის დღისთვის დარჩება ~{gel(Math.round(t.landing.p50 / 10) * 10)}, ანუ დაახლოებით {days} დღის ხარჯი. უსაფრთხო ზღვარი: {gel(e.cushion)}.</div>
       </div>
     )
   }
@@ -87,9 +101,11 @@ export function LessonVisual({ v }: { v: Visual }) {
     ]
     return (
       <div style={{ display: 'grid', gap: 10 }}>
-        <div className="small" style={{ fontWeight: 800 }}>1 200 ₾-ის ტელეფონი — რამდენს გადაიხდი ზედმეტად</div>
+        <Head legend="თვიური შენატანი: 300 / 110 / 60 ₾.">
+          <div className="small" style={{ fontWeight: 800 }}>1 200 ₾-ის ტელეფონი — რამდენს გადაიხდი ზედმეტად</div>
+        </Head>
         {rows.map((r, i) => <Bar key={r.l} label={r.l} value={r.c} max={260} color={i === 2 ? '#d9534f' : i === 1 ? '#f0a03c' : '#58b368'} note={`+${gel(r.c)}`} delay={i * 0.25} />)}
-        <div className="tiny muted">თვიური შენატანი: 300 / 110 / 60 ₾. ყველაზე პატარა შენატანი ჯამში ყველაზე ძვირი ჯდება.</div>
+        <div className="tiny muted">ყველაზე პატარა შენატანი ჯამში ყველაზე ძვირი ჯდება.</div>
       </div>
     )
   }
@@ -98,12 +114,13 @@ export function LessonVisual({ v }: { v: Visual }) {
     const cap = Math.round(p.salary * 0.25)
     return (
       <div style={{ display: 'grid', gap: 8 }}>
-        <div className="small">სესხების შენატანი <b>{gel(debt)}</b> ÷ ხელფასი <b>{gel(p.salary)}</b> = PTI <b>{fmt((debt / p.salary) * 100, 1)}%</b></div>
+        <Head legend={<>წითელი ხაზი — 25%-იანი ზღვარი ({gel(cap)}). ზოლი შემოსავლის 0–50%-ს აჩვენებს.</>}>
+          <div className="small">სესხების შენატანი <b>{gel(debt)}</b> ÷ ხელფასი <b>{gel(p.salary)}</b> = PTI <b>{fmt((debt / p.salary) * 100, 1)}%</b></div>
+        </Head>
         <div style={{ position: 'relative', height: 22, borderRadius: 8, background: '#e7edf3' }}>
           <motion.div initial={{ width: 0 }} animate={{ width: `${(debt / p.salary) * 100 * 2}%` }} transition={{ duration: 0.8 }} style={{ position: 'absolute', inset: 0, right: 'auto', background: '#1f3b57', borderRadius: 8 }} />
           <div style={{ position: 'absolute', left: '50%', top: -4, bottom: -4, borderLeft: '2px dashed #d9534f' }} />
         </div>
-        <div className="tiny muted">წითელი ხაზი — 25%-იანი ზღვარი ({gel(cap)}). ზოლი შემოსავლის 0–50%-ს აჩვენებს.</div>
       </div>
     )
   }

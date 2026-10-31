@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useStore, evolutionStage } from '../../state/store'
 import { useToday, gel } from '../../engine/view'
 import { Jikho } from '../Jikho'
-import { Progress } from '../ui'
+import { Progress, InfoTip } from '../ui'
 
 /** ნინოს მედიანური დღე = 22,2 ₾ → კვირის საკვები: ჯიხო 62 ₾, ფაქტი 66 ₾. სხვებისთვის — პროპორციულად. */
 const NINO_MEDIAN = 22.2
@@ -44,16 +44,18 @@ export function BeatCard() {
   const x = (n: number) => `${Math.min(100, Math.max(0, ((n - lo) / span) * 100))}%`
 
   return (
-    <div className="card" style={{ padding: 16, background: 'linear-gradient(150deg,#f1ecff,#ffffff 65%)' }}>
+    <div className="card" data-info-root style={{ padding: 16, background: 'linear-gradient(150deg,#f1ecff,#ffffff 65%)', position: 'relative' }}>
       <div className="between">
         <span className="tag" style={{ background: '#fff', color: 'var(--violet)' }}>კვირის გამოწვევა</span>
         <span className="tiny muted">ერთხელ კვირაში</span>
       </div>
-      <div className="h2" style={{ marginTop: 8 }}>აჯობე პროგნოზს</div>
+      <div className="between" style={{ marginTop: 8 }}>
+        <div className="h2">აჯობე პროგნოზს</div>
+        <InfoTip label="წესები">იგებს, ვისი ვარაუდიც უფრო ზუსტია. ნაკლები ხარჯვა აქ ქულას არ გაძლევს.</InfoTip>
+      </div>
       <div className="small" style={{ marginTop: 4, lineHeight: 1.45 }}>
         რამდენს დახარჯავ ამ კვირაში <b>საკვებზე</b>? ჯიხოსაც აქვს ვარაუდი.
       </div>
-      <div className="tiny muted" style={{ marginTop: 4 }}>იგებს, ვისი ვარაუდიც უფრო ზუსტია. ნაკლები ხარჯვა აქ ქულას არ გაძლევს.</div>
 
       <div style={{ textAlign: 'center', marginTop: 14 }}>
         <div className="tiny muted" style={{ fontWeight: 700 }}>შენი ვარაუდი</div>
@@ -79,7 +81,7 @@ export function BeatCard() {
           <div className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>დემო: კვირის რეალური ხარჯი ახლავე გამოჩნდება</div>
         </>
       ) : (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div data-info-root initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={{ position: 'relative' }}>
           {/* სამი ზოლი საერთო ღერძზე: შენ · ჯიხო · ფაქტი */}
           <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
             {[
@@ -108,9 +110,10 @@ export function BeatCard() {
             <div style={{ flex: 1 }}>
               <div className="h3" style={{ color: outcome === 'win' ? 'var(--good)' : 'var(--ink)' }}>{outcome === 'win' ? '🏆 შენ აჯობე!' : outcome === 'tie' ? '🤝 ფრე' : 'ამჯერად ჯიხომ აჯობა'}</div>
               <div className="small" style={{ lineHeight: 1.4 }}>
-                შენ {gel(dUser)}-ით ასცდი, ჯიხო — {gel(dEngine)}-ით. {outcome === 'win' ? 'შენ შენს კვირას უკეთ იცნობ — ესაა მიზანი.' : 'ყოველი ვარაუდი შენს „შინაგან პროგნოზს" ავარჯიშებს.'}
+                შენ {gel(dUser)}-ით ასცდი, ჯიხო — {gel(dEngine)}-ით.
               </div>
             </div>
+            <InfoTip>{outcome === 'win' ? 'შენ შენს კვირას უკეთ იცნობ — ესაა მიზანი.' : 'ყოველი ვარაუდი შენს „შინაგან პროგნოზს" ავარჯიშებს.'}</InfoTip>
           </div>
           <div className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>შემდეგი გამოწვევა — მომავალ კვირას</div>
         </motion.div>
