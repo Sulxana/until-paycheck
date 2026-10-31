@@ -33,10 +33,12 @@ export function Roll({ v, className }: { v: number; className?: string }) {
 interface Props {
   m: Month
   fc: Fc
-  /** forecast if the previewed option is taken (with the open fork counted at its average in `fc`) */
+  /** forecast if the previewed option is taken (the open fork counts at its cheaper option in `fc`) */
   preview: Fc | null
   money: number
   energy: number
+  /** ⚡ has run out at least once this month (☀ is no longer possible) */
+  emptied: boolean
   day: number
   combo: number
   muted: boolean
@@ -47,11 +49,12 @@ interface Props {
   onExit: () => void
 }
 
-export const Hud = memo(function Hud({ m, fc, preview, money, energy, day, combo, muted, moneyRef, energyRef, onMute, onPause, onExit }: Props) {
+export const Hud = memo(function Hud({ m, fc, preview, money, energy, emptied, day, combo, muted, moneyRef, energyRef, onMute, onPause, onExit }: Props) {
   const w: WeatherKind = preview ? preview.weather : fc.weather
   const d = Math.max(0, Math.min(30, day))
-  const bills = m.bills.filter(b => b.day > day).slice(0, 4)
+  const bills = m.bills.filter(b => b.day > day).slice(0, 3)
   const level = energy >= 5 ? 'hi' : energy >= 3 ? 'mid' : 'lo'
+  const delta = preview ? Math.round(preview.p50 - fc.p50) : 0
   const stop = (e: React.PointerEvent) => e.stopPropagation()
   return (
     <div className="f-hud" onPointerDown={stop}>
@@ -66,10 +69,10 @@ export const Hud = memo(function Hud({ m, fc, preview, money, energy, day, combo
       <div className={'f-hud-card w-' + w + (preview ? ' pv' : '')}>
         <div className="f-wx"><span key={w}>{WEMOJI[w]}</span></div>
         <div className="f-pay">
-          <span className="lbl">ხელფასის დღეს</span>
+          <span className="lbl">{preview ? 'ამ გზით ხელფასის დღეს' : 'ხელფასის დღეს'}</span>
           <span className="big">
             {preview ? (
-              <><span className="from">{fmt(r5(fc.p50))}</span><span className="arrow">→</span><Roll v={r5(preview.p50)} /> ₾</>
+              <><Roll v={preview.p50} /> ₾<span key={delta} className={'delta' + (delta < 0 ? ' neg' : '')}>{delta < 0 ? `−${fmt(-delta)} ₾` : '±0 ₾'}</span></>
             ) : (
               <>≈ <Roll v={r5(fc.p50)} /> ₾</>
             )}
@@ -87,9 +90,12 @@ export const Hud = memo(function Hud({ m, fc, preview, money, energy, day, combo
           <span className="bar">{Array.from({ length: E_MAX }).map((_, i) => <i key={i} className={i < energy ? 'on' : ''} />)}</span>
           <b>{energy}</b>
         </div>
+        <span key={emptied ? 'c' : 's'} className={'f-goal' + (emptied ? ' gone' : '')} title={emptied ? '⚡ ერთხელ დაიცალა: ამ თვეს ☀️ აღარ იქნება' : '☀️-ით ჩასვლა: ფული ზღვარზე მეტი და ⚡ არასდროს 0'}>
+          {emptied ? '🌥️' : '☀️'}<small>⚡&gt;0</small>
+        </span>
         <div className="f-bills">
           {bills.map(b => (
-            <span key={b.label} className={'stone' + (b.rent ? ' rent' : '')} title={b.label}><i>{b.icon} {fmt(b.nominal)}</i><small>{m.days[b.day].label}</small></span>
+            <span key={b.label} className={'stone' + (b.rent ? ' rent' : '')} title={b.label}><i>{b.icon} {fmt(b.amount)}</i><small>{m.days[b.day].label}</small></span>
           ))}
         </div>
       </div>

@@ -35,6 +35,7 @@ class ForkAudio {
   private nextT = 0
   private stepN = 0
   private tension = false
+  private ducked = false
   private calm = false
   muted = false
 
@@ -81,15 +82,28 @@ class ForkAudio {
   resume() { try { if (this.ctx?.state === 'suspended') void this.ctx.resume() } catch { /* ignore */ } }
 
   // ---------------- music ----------------
+  /** (re)starts the loop from its first bar, in the plain (not rent-mountain) version */
   startMusic(calm: boolean) {
-    if (!this.ctx || this.timer) return
     this.calm = calm
+    this.tension = false
+    this.duck(false)
+    if (!this.ctx || this.timer) return
     this.nextT = this.ctx.currentTime + 0.08
     this.stepN = 0
     this.timer = window.setInterval(() => this.schedule(), 30)
   }
-  stopMusic() { if (this.timer) { clearInterval(this.timer); this.timer = 0 } }
+  stopMusic() {
+    if (this.timer) { clearInterval(this.timer); this.timer = 0 }
+    this.tension = false
+    this.duck(false)
+  }
   setTension(on: boolean) { this.tension = on && !this.calm }
+  /** while Jikho waits at a fork: only a soft pad of chords, no beat; the beat comes back on the choice */
+  duck(on: boolean) {
+    if (this.ducked === on) return
+    this.ducked = on
+    if (this.ctx && this.music) this.music.gain.setTargetAtTime(on ? 0.16 : 0.32, this.ctx.currentTime, 0.12)
+  }
 
   private schedule() {
     const ctx = this.ctx
@@ -102,15 +116,20 @@ class ForkAudio {
       const mel = this.tension ? T_MELODY : MELODY
       const ch = this.tension ? T_CHORDS : CHORDS
       const bs = this.tension ? T_BASS : BASS
-      if (s === 0 || s === 4) {
-        this.pluck(bs[bar], t, 0.34, this.music!, 0.9)
-        ch[bar].forEach((n, k) => this.pluck(n, t + 0.018 * k, 0.12, this.music!, 0.55))
+      if (this.ducked) {
+        // thinking: a slow, dark strum of the chord once a bar
+        if (s === 0) ch[bar].forEach((n, k) => this.pluck(n, t + 0.06 * k, 0.14, this.music!, 0.25))
+      } else {
+        if (s === 0 || s === 4) {
+          this.pluck(bs[bar], t, 0.34, this.music!, 0.9)
+          ch[bar].forEach((n, k) => this.pluck(n, t + 0.018 * k, 0.12, this.music!, 0.55))
+        }
+        if (s === 2 || s === 6) ch[bar].forEach((n, k) => this.pluck(n + 12, t + 0.012 * k, 0.05, this.music!, 0.5))
+        if (mel[i]) this.pluck(mel[i], t, this.tension ? 0.16 : 0.2, this.music!, 0.7)
+        // doli-like pulse: soft low thump on beats, a tick on off-beats
+        if (s % 2 === 0) this.thump(t, this.tension ? 0.22 : 0.15)
+        else this.tick(t, 0.035)
       }
-      if (s === 2 || s === 6) ch[bar].forEach((n, k) => this.pluck(n + 12, t + 0.012 * k, 0.05, this.music!, 0.5))
-      if (mel[i]) this.pluck(mel[i], t, this.tension ? 0.16 : 0.2, this.music!, 0.7)
-      // doli-like pulse: soft low thump on beats, a tick on off-beats
-      if (s % 2 === 0) this.thump(t, this.tension ? 0.22 : 0.15)
-      else this.tick(t, 0.035)
       this.nextT += eighth
       this.stepN++
     }
@@ -221,7 +240,10 @@ class ForkAudio {
   }
 
   // ---------------- effects ----------------
-  whoosh() { if (this.ctx) this.noiseHit(this.ctx.currentTime, 0.5, 'bandpass', 500, 0.28, this.sfx, 2600) }
+  /** the choice: a sweep up for the upper road, down for the lower one */
+  whoosh(up: boolean) { if (this.ctx) this.noiseHit(this.ctx.currentTime, 0.5, 'bandpass', up ? 480 : 2900, 0.28, this.sfx, up ? 3200 : 420) }
+  /** holding a road: a soft tick, or two falling notes when that road makes the payday sky darker */
+  preview(darker: boolean) { if (darker) this.notes([76, 71], 0.09, 0.3); else this.hover() }
   jump() { this.tone('sine', 330, 700, 0.14, 0.22) }
   land() { this.tone('sine', 140, 60, 0.09, 0.18) }
   hover() { this.tone('triangle', 900, 1000, 0.04, 0.06) }

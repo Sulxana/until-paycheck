@@ -1,10 +1,11 @@
-// Self-check for the forked-road runner "გზის გასაყარი": determinism, bots on the default month, run length,
-// forecast sanity (bills barely move the payday sky), red-line words.
+// Self-check for the forked-road runner "გზის გასაყარი": determinism, bots on the default month, run length (also
+// with a human reading delay, through the same motion model the screen uses), forecast sanity (bills barely move the
+// payday sky, a choice never raises it), the combo never landing Jikho on a scam, red-line words.
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  buildMonth, playBot, botCheap, botPaid, botBalanced, endingOf, runSeconds, forecast, newRun, advanceTo, chooseFork,
-  DEFAULT_SEED, Month, Run, Policy,
+  buildMonth, playBot, playTimed, botCheap, botPaid, botBalanced, endingOf, runSeconds, forecast, newRun, advanceTo, chooseFork, locked, wRank,
+  DEFAULT_SEED, COMBO_MOVE, Month, Run, Policy,
 } from '../src/fork/sim'
 
 let fails = 0
@@ -36,6 +37,23 @@ check('always-paid does not reach ☀', endingOf(m, res['always-paid']) !== 'sun
 check('balanced reaches ☀', endingOf(m, res['balanced']) === 'sun')
 const secs = runSeconds(m, res['balanced'])
 check('a run takes 60–90 s at normal speed', secs >= 60 && secs <= 90, `${secs.toFixed(1)} s (no stops at forks)`)
+{
+  // the same month played frame by frame: each fork chosen 1.5 s after its pads show (a first-time reader)
+  const t15 = playTimed(m, botBalanced, 1.5)
+  check('with a 1.5 s reading delay the run still takes 60–90 s', t15.secs >= 60 && t15.secs <= 90, `${t15.secs.toFixed(1)} s, Jikho stopped at ${t15.stops} of ${m.forks.length} forks`)
+  const slow = [2, 2.5, 3].map(R => { const t = playTimed(m, botBalanced, R); return `${R} s → ${t.secs.toFixed(0)} s (${t.stops} stops)` })
+  console.log(`     slower readers: ${slow.join(', ')}`)
+  // the combo celebration is a spin on the ground: with good jumps, no reaction time makes Jikho land on a scam
+  let hits = 0, spins = 0
+  const where: string[] = []
+  for (const R of [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 1.8]) for (const pol of [botBalanced, botCheap]) {
+    const t = playTimed(m, pol, R)
+    hits += t.r.scamsHit
+    spins += t.spins + t.flips
+    if (t.r.scamsHit) where.push(`${R} s: ${t.r.scamsHit}`)
+  }
+  check('combo celebrations never land Jikho on a scam', COMBO_MOVE === 'spin' && hits === 0, `${spins} celebrations, ${hits} scams hit${where.length ? ' (' + where.join(', ') + ')' : ''}`)
+}
 const cheapDays = new Set(m.forks.map(f => Math.floor(f.day)))
 check('20–25 forks in the month', m.forks.length >= 20 && m.forks.length <= 25, `${m.forks.length} forks on ${cheapDays.size} different days`)
 
@@ -51,6 +69,52 @@ check('20–25 forks in the month', m.forks.length >= 20 && m.forks.length <= 25
   const after = forecast(m, r)
   const drop = money0 - r.money
   check('rent day: account drops, payday forecast barely moves', drop >= 660 && Math.abs(after.p50 - before.p50) < 40, `account −${fmt(drop)} ₾, payday ${fmt(before.p50)} → ${fmt(after.p50)} ₾ (${before.weather} → ${after.weather})`)
+}
+
+// 2b. a choice never raises the payday forecast; the cheaper option keeps it; lending is money gone this month
+{
+  let rises = 0, keeps = 0, diffSky = 0, n = 0
+  let lend = ''
+  for (const pol of [botBalanced, botCheap, botPaid]) {
+    const r = newRun(m)
+    for (const f of m.forks) {
+      advanceTo(m, r, f.x)
+      if (r.failed) break
+      const now = forecast(m, r), a = forecast(m, r, { f: f.i, side: 0 }), b = forecast(m, r, { f: f.i, side: 1 })
+      if (a.p50 > now.p50 + 0.5 || b.p50 > now.p50 + 0.5) rises++
+      if (Math.abs(Math.max(a.p50, b.p50) - now.p50) < 0.5) keeps++
+      if (a.weather !== b.weather) diffSky++
+      n++
+      if (f.id === 'friend' && !lend) {
+        const s = f.opts[0].back ? 0 : 1
+        lend = `lending ${Math.round(now.p50 - (s ? b : a).p50)} ₾, refusing ${Math.round(now.p50 - (s ? a : b).p50)} ₾`
+      }
+      let side = pol(m, r, f)
+      if (locked(m, r, f.i, side)) side = (1 - side) as 0 | 1
+      chooseFork(m, r, f.i, side)
+    }
+  }
+  check('no fork option raises the payday forecast', rises === 0, `${rises} of ${n} forks`)
+  check('the cheaper option keeps the payday forecast where it is', keeps === n, `${keeps}/${n}; previews show different skies at ${diffSky}/${n}`)
+  check('lending to a friend lowers this month\'s payday forecast (it comes back after payday)', /^lending 50 ₾, refusing 0 ₾$/.test(lend), lend)
+  // the combo never counts a choice that darkens the payday sky or leaves ⚡ below 3
+  let bad = 0, counted = 0
+  let sd = 4242
+  const rnd = () => { sd = (sd * 1103515245 + 12345) & 0x7fffffff; return sd / 0x7fffffff }
+  for (let k = 0; k < 200; k++) {
+    const r = newRun(m)
+    for (const f of m.forks) {
+      advanceTo(m, r, f.x)
+      if (r.failed || r.arrived) break
+      const before = forecast(m, r)
+      let side: 0 | 1 = rnd() < 0.5 ? 0 : 1
+      if (locked(m, r, f.i, side)) side = (1 - side) as 0 | 1
+      const fx = chooseFork(m, r, f.i, side)
+      const c = fx[0]
+      if (c && c.k === 'choose' && c.balanced) { counted++; if (wRank(forecast(m, r).weather) > wRank(before.weather) || r.energy < 3) bad++ }
+    }
+  }
+  check('the combo never counts a choice that darkens the sky or leaves ⚡ below 3', bad === 0, `${counted} balanced choices in 200 random months, ${bad} wrong`)
 }
 
 // 3. other months (information): how often each bot reaches ☀

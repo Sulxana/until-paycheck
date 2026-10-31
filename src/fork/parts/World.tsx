@@ -4,6 +4,8 @@ import { Month, Run, ForkInst, OptInst, FORK_LEN, LANE_DY, hillAt, laneProfile, 
 
 export const WIN = 300
 export const JOY_Y = 128
+/** the road signs stand on their own branch, this far after the junction (where the two lanes are fully apart) */
+export const SIGN_U = 128
 const MEADOW_TOP = 165
 
 interface Props {
@@ -16,13 +18,14 @@ interface Props {
   H: number
   pend: { i: number; preview: 0 | 1 | null } | null
   waiting: boolean
+  lowEnergy: boolean
   onHover: (side: 0 | 1 | null) => void
 }
 
 const hash = (n: number) => { const s = Math.sin(n * 127.1) * 43758.5453; return s - Math.floor(s) }
 
 /** the road for the part of the month near the screen: meadow, lanes, signs, scams, joys, the rent gate, the payday arch */
-export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, onHover }: Props) {
+export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, lowEnergy, onHover }: Props) {
   const x0 = win * WIN - 420, x1 = win * WIN + 1320
   const ry = (x: number) => baseY - hillAt(m, x)
   const X = (x: number) => (x - x0).toFixed(1)
@@ -66,9 +69,9 @@ export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, o
     const ix = f.x + FORK_LEN / 2
     islands.push(
       <g key={f.i} transform={`translate(${X(ix)} ${ry(ix).toFixed(1)})`}>
-        <ellipse cx="0" cy="18" rx="44" ry="8" fill="rgba(0,0,0,0.08)" />
-        <circle cx="-18" cy="4" r="16" fill="#5fa868" /><circle cx="12" cy="0" r="20" fill="#6fb877" /><circle cx="-2" cy="-14" r="15" fill="#7cc483" />
-        <circle cx="6" cy="-6" r="2.4" fill="#ff9fb6" /><circle cx="-14" cy="0" r="2.2" fill="#ffd166" />
+        <ellipse cx="0" cy="16" rx="40" ry="7" fill="rgba(0,0,0,0.08)" />
+        <circle cx="-16" cy="4" r="14" fill="#5fa868" /><circle cx="11" cy="0" r="18" fill="#6fb877" /><circle cx="-2" cy="-12" r="13" fill="#7cc483" />
+        <circle cx="6" cy="-6" r="2.4" fill="#ff9fb6" /><circle cx="-13" cy="0" r="2.2" fill="#ffd166" />
       </g>,
     )
     cur = Math.max(cur, f.x + FORK_LEN)
@@ -120,8 +123,16 @@ export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, o
         if (it.kind === 'scam') {
           return (
             <div key={'i' + i} className={'f-scam ' + st} style={{ left: it.x, top: ry(it.x) }}>
-              <div className="bubble"><span className="ic">{it.def.e}</span><span>{it.def.sign}</span>{st === 'hit' && <b className="cost">−{fmt(it.def.p)} ₾</b>}</div>
-              <div className="trap"><span>{it.def.e}</span></div>
+              <div className="bubble"><span className="ic">{it.def.e}</span><span>{it.def.short}</span>{st === 'hit' && <b className="cost">−{fmt(it.def.p)} ₾</b>}</div>
+              <svg className="hood" viewBox="0 0 64 60" aria-hidden="true">
+                <path d="M40 22 Q52 6 60 10" className="rod" />
+                <path d="M60 10 L60 34" className="lineq" />
+                <path d="M20 4 C9 4 4 15 4 27 L2 58 L38 58 L36 27 C36 15 31 4 20 4 Z" className="cloak" />
+                <ellipse cx="20" cy="25" rx="9.5" ry="10.5" className="face" />
+                <circle cx="16.5" cy="25" r="1.9" className="eye" /><circle cx="23.5" cy="25" r="1.9" className="eye" />
+              </svg>
+              <span className="qm">?</span>
+              <span className="bait">{it.def.e}</span>
             </div>
           )
         }
@@ -136,12 +147,14 @@ export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, o
         const ch = r.choice[f.i]
         const isPend = pend?.i === f.i
         return (
-          <div key={'f' + f.i} className={'f-signs' + (isPend && waiting ? ' waiting' : '')} style={{ left: f.x - 10, top: ry(f.x) }}>
+          <div key={'f' + f.i} className={'f-signs' + (isPend && waiting ? ' waiting' : '')}>
             {([0, 1] as const).map(side => (
-              <Sign key={side} o={f.opts[side]} side={side} m={m}
-                state={ch !== undefined ? (ch === side ? 'on' : 'off') : isPend && pend!.preview === side ? 'pv' : ''}
-                lock={ch === undefined && locked(m, r, f.i, side)}
-                onHover={isPend ? onHover : undefined} />
+              <div key={side} className="f-signpos" style={{ left: f.x + SIGN_U, top: ry(f.x + SIGN_U) + laneSign(side) * LANE_DY }}>
+                <Sign o={f.opts[side]} side={side} low={lowEnergy}
+                  state={ch !== undefined ? (ch === side ? 'on' : 'off') : isPend && pend!.preview === side ? 'pv' : ''}
+                  lock={ch === undefined && locked(m, r, f.i, side)}
+                  onHover={isPend ? onHover : undefined} />
+              </div>
             ))}
           </div>
         )
@@ -150,18 +163,20 @@ export const World = memo(function World({ m, r, win, baseY, H, pend, waiting, o
   )
 })
 
-function Sign({ o, side, m, state, lock, onHover }: { o: OptInst; side: 0 | 1; m: Month; state: string; lock: boolean; onHover?: (s: 0 | 1 | null) => void }) {
-  const en = o.en > 0 ? <span className="en pos">⚡+{o.en}</span> : o.en < 0 ? <span className="en neg">⚡−{-o.en}</span> : null
+function Sign({ o, side, state, lock, low, onHover }: { o: OptInst; side: 0 | 1; state: string; lock: boolean; low: boolean; onHover?: (s: 0 | 1 | null) => void }) {
+  const en = o.en > 0 ? <span className="en pos">⚡+{o.en}</span> : o.en < 0 ? <span className={'en neg' + (low ? ' warn' : '')}>⚡−{-o.en}</span> : null
   return (
-    <div className={`f-sign ${side ? 'down' : 'up'} ${state}${lock ? ' lock' : ''}`} data-side={side}
+    <div className={`f-sign ${side ? 'down' : 'up'} ${state}${lock ? ' lock' : ''}`} data-side={side} title={o.t} aria-label={`${o.t} · ${fmt(o.p)} ₾`}
       onPointerEnter={e => { if (e.pointerType === 'mouse' && onHover) onHover(side) }}
       onPointerLeave={e => { if (e.pointerType === 'mouse' && onHover) onHover(null) }}>
-      <div className="row"><span className="ic">{o.e}</span><span className="t">{o.t}</span></div>
-      <div className="meta">
-        {lock ? <span className="lk">🔒 ანგარიშზე არ არის</span> : <><b>{fmt(o.p)} ₾</b>{en}{o.back && o.backDay < 30 && <span className="bk">↩ {m.days[o.backDay].label}</span>}</>}
-      </div>
+      <span className="ic">{o.e}</span>
+      <span className="meta">
+        {lock ? <span className="lk">🔒</span> : null}
+        <b>{fmt(o.p)} ₾</b>
+        {!lock && en}
+        {!lock && o.back && <span className="bk">↩</span>}
+      </span>
       {state === 'on' && <span className="ok">✓</span>}
-      <span className="arr">{side ? '↘' : '↗'}</span>
     </div>
   )
 }

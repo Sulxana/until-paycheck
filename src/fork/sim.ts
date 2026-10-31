@@ -3,6 +3,8 @@
 // The payday forecast is a Monte Carlo over the rest of the month with common random numbers: the random part
 // (everyday spending + unexpected costs) is drawn once per month, summed per day and sorted, so any forecast is
 // a shift of the same sorted sample — instant, and two forecasts differ only by the choices.
+// Open forks count at their cheaper option (by what they cost this month, chains included), so a choice can only
+// keep the payday number or lower it: paying never makes it rise.
 import { PyRandom } from '../engine/pyrandom'
 import { NINO, Persona } from '../engine/personas'
 import { getEngine, weatherOf, WeatherKind, KA_MONTHS_FULL } from '../engine/engine'
@@ -11,11 +13,27 @@ import { FORKS, CURATED, CURATED_GAPS, CURATED_SURPRISES, SCAMS, JOYS, DECEMBER_
 // ---------------- tuning ----------------
 export const SPEED = 215 // px/s at normal speed
 export const CLIMB_SLOW = 0.86 // speed factor on the rent mountain
+/** a fork can be chosen (its pads show) once its junction is this close: about 2.3 s at full speed */
+export const LOOK = 490
+/** easing into an undecided fork starts this close to its junction, down to SLOW_FLOOR of full speed, then a stop */
+export const SLOW_DIST = 110
+export const SLOW_FLOOR = 0.45
+export const STOP_PAD = 6
+// jumps: a scam is hit when Jikho is lower than SCAM_H within HIT_HALF of it; a joy is caught higher than JOY_Y_MIN
+export const JUMP_V = 620
+export const GRAV = 1650
+export const AIR_T = (2 * JUMP_V) / GRAV
+export const HIT_HALF = 20
+export const SCAM_H = 36
+export const JOY_HALF = 36
+export const JOY_Y_MIN = 30
+/** what a combo does: a spin on the ground ('flip' would be a jump, which can land Jikho on a scam ahead) */
+export const COMBO_MOVE = 'spin' as 'spin' | 'flip'
 export const INTRO = 250
 export const FORK_LEN = 330
 export const SPLIT = 100
 export const MERGE = 100
-export const LANE_DY = 112
+export const LANE_DY = 96
 export const GAP_LEN: Record<string, number> = { s: 330, j: 230, '-': 170 }
 export const ITEM_AT: Record<string, number> = { s: 150, j: 112 }
 export const SUMMIT = 340
@@ -29,15 +47,15 @@ export const E_START = 6
 export const E_RESET = 4
 export const FATIGUE_PAUSE = 1.3 // s Jikho sits when ⚡ runs out
 export const K_PATHS = 400
-/** target share of forecast paths below the cushion on day 0 (forks at their average): a cloudy start */
-export const P0_TARGET = 0.2
+/** the month's slack: on day 0, with every fork at its cheaper option, the payday forecast is cushion + SLACK0 */
+export const SLACK0 = 250
 export const DEFAULT_SEED = 20261110
 
 const N_DAYS = 30
 
 export interface DayInfo { label: string; weekday: number; weekend: boolean; dec: boolean }
 export interface OptInst extends Opt { net: number; laterDay: number; backDay: number }
-export interface ForkInst { i: number; id: string; card: ForkCard; x: number; day: number; opts: [OptInst, OptInst]; mean: number }
+export interface ForkInst { i: number; id: string; card: ForkCard; x: number; day: number; opts: [OptInst, OptInst]; minNet: number }
 export type Item = { kind: 'scam'; x: number; def: ScamDef } | { kind: 'joy'; x: number; def: JoyDef }
 export interface Bill { day: number; label: string; icon: string; amount: number; nominal: number; rent: boolean }
 export interface Surprise { day: number; e: string; t: string; p: number }
@@ -56,8 +74,8 @@ export interface Month {
   surprises: Surprise[]
   /** actual everyday spending per day 0..29 */
   bg: number[]
-  /** ⚡ −1 on these days (a working day, or a weekend of chores) */
-  drain: boolean[]
+  /** ⚡ change on the morning of each day: a working day −1, a weekend day of rest +1 */
+  dayEn: number[]
   /** x of each day boundary 0..30 (30 = payday arch) */
   dayX: number[]
   length: number
@@ -195,7 +213,7 @@ export function buildMonth(seed = DEFAULT_SEED, calm = false): Month {
     const upperIsA = rng.random() < 0.5
     const A = optInst(d.card.a, d.day), B = optInst(d.card.b, d.day)
     const opts: [OptInst, OptInst] = upperIsA ? [A, B] : [B, A]
-    forks.push({ i: k, id: d.card.id, card: d.card, x, day: d.day, opts, mean: (A.net + B.net) / 2 })
+    forks.push({ i: k, id: d.card.id, card: d.card, x, day: d.day, opts, minNet: Math.min(A.net, B.net) })
     x += FORK_LEN
     const g = gaps[k] ?? '-'
     if (g === 's') items.push({ kind: 'scam', x: x + ITEM_AT.s, def: scamBag[si++ % scamBag.length] })
@@ -221,8 +239,9 @@ export function buildMonth(seed = DEFAULT_SEED, calm = false): Month {
   const actual = new PyRandom(seed + 3)
   const dayOf = (dom: number) => (dom >= p.paydayDay ? dom - p.paydayDay : 30 - p.paydayDay + dom)
   const icon: Record<string, string> = { rent: '🏠', utility: '💡', telecom: '📶', subscription: '🎵', installment: '💳', sport: '🏋️' }
+  const byName: Record<string, string> = { 'თბილისი ენერჯი': '🔥', GWP: '💧' }
   const bills: Bill[] = p.fixed
-    .map(f => ({ day: dayOf(f.day), label: f.name, icon: icon[f.kind], amount: Math.round(f.range ? actual.uniform(f.range[0], f.range[1]) : f.amount), nominal: f.amount, rent: f.day === 1 }))
+    .map(f => ({ day: dayOf(f.day), label: f.name, icon: byName[f.name] ?? icon[f.kind], amount: Math.round(f.range ? actual.uniform(f.range[0], f.range[1]) : f.amount), nominal: f.amount, rent: f.day === 1 }))
     .sort((a, b) => a.day - b.day)
 
   // ---- the random part: everyday spending and unexpected costs ----
@@ -244,11 +263,12 @@ export function buildMonth(seed = DEFAULT_SEED, calm = false): Month {
   }
   const startMoney = Math.round(e.landing.p50) + p.salary
   const cushion = e.cushion
-  const det0 = bills.reduce((s, b) => s + b.nominal, 0) + forks.reduce((s, f) => s + f.mean, 0)
-  const thr0 = startMoney - det0 - cushion
-  const pBelow0 = (kk: number) => { let n = 0; for (let k = 0; k < K_PATHS; k++) if (kk * A[k][0] + Bp[k][0] > thr0) n++; return n / K_PATHS }
-  let lo = 0.15, hi = 1.6
-  for (let it = 0; it < 40; it++) { const mid = (lo + hi) / 2; if (pBelow0(mid) < P0_TARGET) lo = mid; else hi = mid }
+  // everyday spending is scaled so that the cheapest way through the month leaves SLACK0 above the cushion on payday
+  const det0 = bills.reduce((s, b) => s + b.amount, 0) + forks.reduce((s, f) => s + f.minNet, 0)
+  const room = startMoney - det0 - cushion - SLACK0
+  const median0 = (kk: number) => { const c = Array.from({ length: K_PATHS }, (_, k) => kk * A[k][0] + Bp[k][0]).sort((a, b) => a - b); return c[K_PATHS >> 1] }
+  let lo = 0.1, hi = 1.6
+  for (let it = 0; it < 40; it++) { const mid = (lo + hi) / 2; if (median0(mid) < room) lo = mid; else hi = mid }
   const kScale = (lo + hi) / 2
   const S: Float64Array[] = []
   for (let i = 0; i <= N_DAYS; i++) {
@@ -268,10 +288,10 @@ export function buildMonth(seed = DEFAULT_SEED, calm = false): Month {
     const s = sBag[surprises.length % sBag.length]
     surprises.push({ day: j, e: s.e, t: s.t, p: amt })
   }
-  const drain = days.slice(0, N_DAYS).map((_, j) => j % 2 === 1)
+  const dayEn = days.slice(0, N_DAYS).map((d, j) => (j === 0 ? 0 : d.weekend ? 1 : -1))
 
   return {
-    seed, calm, p, days, salary: p.salary, startMoney, cushion, forks, items, bills, surprises, bg, drain, dayX, length,
+    seed, calm, p, days, salary: p.salary, startMoney, cushion, forks, items, bills, surprises, bg, dayEn, dayX, length,
     rentX, climbFrom: rentX - CLIMB, descendTo: rentX + DESCENT, S, kScale,
   }
 }
@@ -293,7 +313,9 @@ export interface Run {
   sched: Sched[]
   spent: { bills: number; bg: number; forks: number; scams: number; fatigue: number; surprises: number; chains: number }
   back: number
-  picks: { i: number; e: string; t: string; p: number }[]
+  picks: { i: number; e: string; t: string; p: number; back: boolean }[]
+  /** lent this month, comes back after payday */
+  lent: number
   failed: { day: number; label: string; icon: string; amount: number; money: number } | null
   arrived: boolean
   scamsHit: number
@@ -308,7 +330,7 @@ export type Fx =
   | { k: 'later'; s: Sched; paid: number }
   | { k: 'back'; s: Sched }
   | { k: 'surprise'; s: Surprise; paid: number }
-  | { k: 'drain'; weekend: boolean; nth: number }
+  | { k: 'dayEn'; delta: number; weekend: boolean; nth: number }
   | { k: 'fatigue'; e: string; t: string; p: number }
   | { k: 'arrive' }
   | { k: 'choose'; i: number; side: 0 | 1; combo: number; balanced: boolean; paid: number; en: number }
@@ -321,7 +343,7 @@ export function newRun(m: Month): Run {
     x: 0, day: -1, money: m.startMoney, energy: E_START, minEnergy: E_START, zeroHits: 0, combo: 0, bestCombo: 0,
     choice: m.forks.map(() => undefined), item: m.items.map(() => undefined), sched: [],
     spent: { bills: 0, bg: 0, forks: 0, scams: 0, fatigue: 0, surprises: 0, chains: 0 }, back: 0,
-    picks: [], failed: null, arrived: false, scamsHit: 0, scamsDodged: 0, joys: 0,
+    picks: [], lent: 0, failed: null, arrived: false, scamsHit: 0, scamsDodged: 0, joys: 0,
   }
 }
 
@@ -368,7 +390,11 @@ function processDay(m: Month, r: Run, d: number, fx: Fx[]) {
   const bg = Math.min(m.bg[d], r.money)
   r.money -= bg
   r.spent.bg += bg
-  if (m.drain[d]) { fx.push({ k: 'drain', weekend: m.days[d].weekend, nth: m.drain.slice(0, d + 1).filter(Boolean).length }); addEnergy(r, -1, fx) }
+  const de = m.dayEn[d]
+  if (de) {
+    fx.push({ k: 'dayEn', delta: de, weekend: m.days[d].weekend, nth: m.dayEn.slice(0, d + 1).filter(v => v === de).length })
+    addEnergy(r, de, fx)
+  }
 }
 
 /** moves the run to x, processing every day boundary on the way (stops at a bill that cannot be paid) */
@@ -392,19 +418,22 @@ export function chooseFork(m: Month, r: Run, i: number, side: 0 | 1): Fx[] {
   if (over(r) || r.choice[i] !== undefined || locked(m, r, i, side)) return fx
   const f = m.forks[i]
   const o = f.opts[side]
+  const before = forecast(m, r)
   r.choice[i] = side
   const paid = Math.min(o.p, r.money)
   r.money -= paid
   r.spent.forks += paid
-  r.picks.push({ i, e: o.e, t: o.t, p: paid })
+  const lend = !!o.back && o.backDay >= N_DAYS
+  r.picks.push({ i, e: o.e, t: o.t, p: paid, back: lend })
+  if (lend) r.lent += paid
   if (o.later && o.laterDay < N_DAYS) r.sched.push({ day: o.laterDay, p: o.later.p, e: o.later.e, t: o.later.t, en: o.later.en, kind: 'later', was: o.later.was })
   if (o.back && o.backDay < N_DAYS) r.sched.push({ day: o.backDay, p: -o.back.p, e: o.back.e, t: o.back.t, en: 0, kind: 'back' })
   const tail: Fx[] = []
   addEnergy(r, o.en, tail)
   const fc = forecast(m, r)
-  // balance = the payday forecast stays at or above the cushion under a sunny or cloudy sky, and ⚡ stays at 3 or more
-  // (it describes the state after the choice; spending never counts by itself)
-  const balanced = !tail.length && fc.p50 >= m.cushion && fc.pBelow < 0.3 && r.energy >= 3
+  // balance describes the state after the choice: ⚡ at 3 or more, the payday forecast at or above the cushion under a
+  // sunny or cloudy sky, and the sky no worse than before the choice (spending never counts by itself)
+  const balanced = !tail.length && r.energy >= 3 && fc.p50 >= m.cushion && fc.pBelow < 0.3 && wRank(fc.weather) <= wRank(before.weather)
   r.combo = balanced ? r.combo + 1 : 0
   r.bestCombo = Math.max(r.bestCombo, r.combo)
   fx.push({ k: 'choose', i, side, combo: r.combo, balanced, paid, en: o.en }, ...tail)
@@ -418,6 +447,7 @@ export function hitScam(m: Month, r: Run, i: number): Fx[] {
   r.money -= paid
   r.spent.scams += paid
   r.scamsHit++
+  r.combo = 0
   r.item[i] = 'hit'
   return [{ k: 'scam', i, paid }]
 }
@@ -435,12 +465,15 @@ export function catchJoy(m: Month, r: Run, i: number): Fx[] {
   addEnergy(r, 1, fx)
   return fx
 }
-export function missJoy(r: Run, i: number) { if (!r.item[i]) r.item[i] = 'missed' }
+export function missJoy(r: Run, i: number) { if (!r.item[i]) { r.item[i] = 'missed'; r.combo = 0 } }
 
 // ---------------- forecast ----------------
 export interface Fc { p50: number; pBelow: number; weather: WeatherKind }
 
-/** payday landing: remaining bills and known later costs/returns, open forks at their average, the random rest from S */
+const W_RANK: Record<WeatherKind, number> = { sun: 0, cloud: 1, rain: 2, storm: 3 }
+export const wRank = (w: WeatherKind) => W_RANK[w]
+
+/** payday landing: remaining bills and known later costs/returns, open forks at their cheaper option, the random rest from S */
 export function forecast(m: Month, r: Run, pend?: { f: number; side: 0 | 1 }): Fc {
   if (over(r)) {
     const v = r.failed ? r.failed.money : r.money
@@ -449,11 +482,11 @@ export function forecast(m: Month, r: Run, pend?: { f: number; side: 0 | 1 }): F
   }
   const d = r.day
   let det = 0
-  for (const b of m.bills) if (b.day > d) det += b.nominal
+  for (const b of m.bills) if (b.day > d) det += b.amount
   for (const s of r.sched) if (!s.done && s.day > d && s.day < N_DAYS) det += s.p
   for (const f of m.forks) {
     if (r.choice[f.i] !== undefined) continue
-    det += pend && pend.f === f.i ? f.opts[pend.side].net : f.mean
+    det += pend && pend.f === f.i ? f.opts[pend.side].net : f.minNet
   }
   const base = r.money - det
   const S = m.S[Math.max(0, d + 1)]
@@ -477,6 +510,35 @@ export function runSeconds(m: Month, r?: Run): number {
   const to = r?.failed ? m.dayX[r.failed.day] : m.length
   for (let x = 0; x < to; x += 10) t += 10 / (SPEED * (climbing(m, x) ? CLIMB_SLOW : 1))
   return t + (r ? r.zeroHits * FATIGUE_PAUSE : 0)
+}
+
+// ---------------- motion (shared by the screen and the headless check) ----------------
+export interface Mover { x: number; v: number }
+/** an unresolved scam between x and `until` */
+export const scamBefore = (m: Month, r: Run, x: number, until: number) => m.items.some((it, i) => it.kind === 'scam' && !r.item[i] && it.x > x - 30 && it.x < until)
+
+/** one frame of running: full speed (slower on the climb); an undecided fork eases Jikho in over its last SLOW_DIST px
+ * and stops him at the junction until a choice, but never eases while a scam still waits before it (it stays
+ * jumpable). Returns true while he stands at the fork. */
+export function moveStep(m: Month, r: Run, mv: Mover, dt: number, f: ForkInst | undefined, hold: boolean): boolean {
+  const open = !!f && r.choice[f.i] === undefined
+  let target = hold ? 0 : SPEED * (climbing(m, mv.x) ? CLIMB_SLOW : 1)
+  if (f && open && !scamBefore(m, r, mv.x, f.x)) { const dist = f.x - STOP_PAD - mv.x; if (dist < SLOW_DIST) target *= Math.max(SLOW_FLOOR, dist / SLOW_DIST) }
+  mv.v += (target - mv.v) * Math.min(1, dt * (target < mv.v ? 7 : 3.5))
+  let nx = mv.x + mv.v * dt
+  let stopped = false
+  if (f && open && nx >= f.x - STOP_PAD) { nx = f.x - STOP_PAD; mv.v = 0; stopped = true }
+  mv.x = Math.max(mv.x, nx)
+  return stopped
+}
+
+export type Contact = 'hit' | 'dodge' | 'catch' | 'miss'
+/** what happens to item i with Jikho at x and jumpY above the road (null: nothing yet) */
+export function contactOf(m: Month, r: Run, i: number, x: number, jumpY: number): Contact | null {
+  if (r.item[i]) return null
+  const it = m.items[i], dx = it.x - x
+  if (it.kind === 'scam') return Math.abs(dx) <= HIT_HALF && jumpY < SCAM_H ? 'hit' : dx < -HIT_HALF ? 'dodge' : null
+  return Math.abs(dx) <= JOY_HALF && jumpY > JOY_Y_MIN ? 'catch' : dx < -JOY_HALF ? 'miss' : null
 }
 
 // ---------------- headless play (self-check, tuning) ----------------
@@ -511,10 +573,61 @@ const cheaperSide = (f: ForkInst): 0 | 1 => (f.opts[0].p === f.opts[1].p ? (f.op
 export const botCheap: Policy = (_m, _r, f) => cheaperSide(f)
 /** always the pricier sign (ties: more ⚡) */
 export const botPaid: Policy = (_m, _r, f) => (f.opts[0].p === f.opts[1].p ? cheaperSide(f) : f.opts[0].p > f.opts[1].p ? 0 : 1)
-/** looks at both previews: keeps the payday forecast above the cushion and ⚡ at 4 or more, then the better forecast */
+/** looks at both previews and the next working days: keeps the payday forecast above the cushion and enough ⚡ for the
+ * days ahead, then the better forecast; when neither side keeps both, ⚡ first */
 export const botBalanced: Policy = (m, r, f) => {
+  let ahead = 0
+  for (let d = Math.max(0, r.day + 1); d <= Math.min(29, r.day + 3); d++) if (m.dayEn[d] < 0) ahead++
   const o = ([0, 1] as const).map(side => ({ side, p50: forecast(m, r, { f: f.i, side }).p50, e: Math.max(0, Math.min(E_MAX, r.energy + f.opts[side].en)) }))
-  const ok = o.filter(v => v.p50 >= m.cushion + 30 && v.e >= 4)
+  const ok = o.filter(v => v.p50 >= m.cushion + 30 && v.e >= Math.max(4, ahead + 2))
   if (ok.length) return ok.sort((a, b) => b.p50 - a.p50)[0].side
   return o.sort((a, b) => b.e - a.e || b.p50 - a.p50)[0].side
+}
+
+export interface Timed { r: Run; secs: number; stops: number; spins: number; flips: number }
+/** plays the month frame by frame the way the screen does: each fork is chosen `react` s after its pads show,
+ * every scam is jumped and every joy caught with good timing (take-off half an airtime before the item) */
+export function playTimed(m: Month, policy: Policy, react: number): Timed {
+  const r = newRun(m)
+  advanceTo(m, r, 0)
+  const mv: Mover = { x: 0, v: 0 }
+  const dt = 1 / 60
+  let t = 0, hold = 0, activeAt = -1, stops = 0, was = false, spins = 0, flips = 0, pend = 0
+  let jumpY = 0, jumpV = 0, air = false
+  const jump = () => { if (!air) { air = true; jumpV = JUMP_V } }
+  const tired = (fx: Fx[]) => { for (const e of fx) if (e.k === 'fatigue') hold = t + FATIGUE_PAUSE }
+  while (!over(r) && t < 600) {
+    t += dt
+    while (pend < m.forks.length && r.choice[pend] !== undefined) pend++
+    const f = m.forks[pend]
+    if (f && f.x - mv.x < LOOK) {
+      if (activeAt < 0) activeAt = t
+      if (t - activeAt >= react) {
+        let side = policy(m, r, f)
+        if (locked(m, r, f.i, side)) side = (1 - side) as 0 | 1
+        const fx = chooseFork(m, r, f.i, side)
+        const c = fx[0]
+        if (c && c.k === 'choose' && c.balanced && c.combo % 3 === 0) { if (COMBO_MOVE === 'flip') { flips++; jump() } else spins++ }
+        tired(fx)
+        activeAt = -1
+        while (pend < m.forks.length && r.choice[pend] !== undefined) pend++
+      }
+    }
+    const st = moveStep(m, r, mv, dt, m.forks[pend], t < hold)
+    if (st && !was) stops++
+    was = st
+    tired(advanceTo(m, r, mv.x))
+    if (over(r)) break
+    for (let i = 0; i < m.items.length; i++) {
+      const c = contactOf(m, r, i, mv.x, jumpY)
+      if (c === 'hit') hitScam(m, r, i)
+      else if (c === 'dodge') dodgeScam(m, r, i)
+      else if (c === 'catch') tired(catchJoy(m, r, i))
+      else if (c === 'miss') missJoy(r, i)
+    }
+    const k = m.items.findIndex((it, i) => !r.item[i] && it.x > mv.x - 40)
+    if (k >= 0 && !air) { const ahead = m.items[k].x - mv.x; if (mv.v > 1 && ahead > 0 && ahead / mv.v <= AIR_T / 2) jump() }
+    if (air) { jumpV -= GRAV * dt; jumpY += jumpV * dt; if (jumpY <= 0) { jumpY = 0; air = false } }
+  }
+  return { r, secs: t, stops, spins, flips }
 }
