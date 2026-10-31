@@ -58,21 +58,38 @@ export function WeatherChip({ w, p }: { w: WeatherKind; p?: number }) {
 
 /** horizontal range bar: p10..p90 band, p50 dot, cushion line */
 export function RangeBar({ p10, p50, p90, cushion, min, max, compare }: { p10: number; p50: number; p90: number; cushion: number; min?: number; max?: number; compare?: { p10: number; p50: number; p90: number } }) {
-  const lo = Math.min(min ?? Infinity, p10, compare?.p10 ?? Infinity, 0) - 15
-  const hi = Math.max(max ?? -Infinity, p90, compare?.p90 ?? -Infinity, cushion) + 15
-  const x = (v: number) => ((v - lo) / (hi - lo)) * 100
+  // one simple picture: a blue band = where you may land, a dot = most likely, a red zone = below the safety cushion
+  const lo = Math.min(min ?? Infinity, p10, compare?.p10 ?? Infinity, 0) - 20
+  const hi = Math.max(max ?? -Infinity, p90, compare?.p90 ?? -Infinity, cushion) + 20
+  const x = (v: number) => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100))
+  const r10 = (v: number) => Math.round(v / 10) * 10
+  const wide = x(p90) - x(p10) > 28
   return (
-    <div style={{ position: 'relative', height: compare ? 64 : 46, marginTop: 6 }}>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 18, height: 10, borderRadius: 6, background: 'linear-gradient(90deg,#f7d4cf 0%,#fbe8bf ' + x(cushion) + '%,#d7f0da ' + Math.min(100, x(cushion) + 12) + '%,#d7f0da 100%)' }} />
-      {compare && (
-        <motion.div initial={false} animate={{ left: x(compare.p10) + '%', width: x(compare.p90) - x(compare.p10) + '%' }} style={{ position: 'absolute', top: 16, height: 14, borderRadius: 8, background: 'rgba(31,59,87,0.15)', border: '1.5px dashed rgba(31,59,87,0.35)' }} />
-      )}
-      <motion.div initial={false} animate={{ left: x(p10) + '%', width: Math.max(2, x(p90) - x(p10)) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 15, height: 16, borderRadius: 8, background: 'rgba(31,59,87,0.55)' }} />
-      <motion.div initial={false} animate={{ left: x(p50) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 11, width: 24, height: 24, marginLeft: -12, borderRadius: '50%', background: '#1f3b57', border: '3px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }} />
-      <div style={{ position: 'absolute', left: x(cushion) + '%', top: 8, bottom: compare ? 22 : 4, width: 0, borderLeft: '2px dashed #d9534f' }} />
-      <div className="tiny" style={{ position: 'absolute', left: x(cushion) + '%', top: compare ? 44 : 34, transform: 'translateX(-50%)', color: '#d9534f', fontWeight: 700, whiteSpace: 'nowrap' }}>ზღვარი {fmt(cushion)} ₾</div>
-      <div className="tiny muted" style={{ position: 'absolute', left: 0, top: -6 }}>{fmt(p10)} ₾</div>
-      <div className="tiny muted" style={{ position: 'absolute', right: 0, top: -6 }}>{fmt(p90)} ₾</div>
+    <div style={{ marginTop: 8 }}>
+      <div style={{ position: 'relative', height: 66 }}>
+        {/* most likely value above the dot */}
+        <motion.div initial={false} animate={{ left: x(p50) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 0, transform: 'translateX(-50%)', whiteSpace: 'nowrap', background: '#1f3b57', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>
+          ~{fmt(r10(p50))} ₾
+        </motion.div>
+        {/* track: red zone below the cushion, light zone above */}
+        <div style={{ position: 'absolute', left: 0, right: 0, top: 28, height: 22, borderRadius: 11, overflow: 'hidden', background: '#eef2f6' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: x(cushion) + '%', background: '#fbe0dc' }} />
+        </div>
+        {compare && (
+          <motion.div initial={false} animate={{ left: x(compare.p10) + '%', width: x(compare.p90) - x(compare.p10) + '%' }} style={{ position: 'absolute', top: 26, height: 26, borderRadius: 13, border: '2px dashed rgba(31,59,87,0.45)' }} />
+        )}
+        <motion.div initial={false} animate={{ left: x(p10) + '%', width: Math.max(3, x(p90) - x(p10)) + '%' }} transition={{ type: 'spring', damping: 20 }}
+          style={{ position: 'absolute', top: 28, height: 22, borderRadius: 11, background: '#5aa9e6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', color: '#fff', fontSize: 11.5, fontWeight: 800, overflow: 'hidden', whiteSpace: 'nowrap' }}>
+          {wide && <><span>{fmt(r10(p10))}</span><span>{fmt(r10(p90))}</span></>}
+        </motion.div>
+        <motion.div initial={false} animate={{ left: x(p50) + '%' }} transition={{ type: 'spring', damping: 20 }} style={{ position: 'absolute', top: 24, width: 14, height: 30, marginLeft: -7, borderRadius: 7, background: '#1f3b57', border: '3px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.25)' }} />
+        {/* cushion line */}
+        <div style={{ position: 'absolute', left: x(cushion) + '%', top: 24, height: 32, borderLeft: '2px dashed #d9534f' }} />
+        <div className="tiny" style={{ position: 'absolute', left: x(cushion) + '%', top: 54, transform: 'translateX(-50%)', color: '#d9534f', fontWeight: 800, whiteSpace: 'nowrap' }}>ზღვარი {fmt(cushion)} ₾</div>
+      </div>
+      <div className="tiny muted" style={{ marginTop: 2 }}>
+        ლურჯი ზოლი — სად შეიძლება აღმოჩნდე ({fmt(r10(p10))}–{fmt(r10(p90))} ₾), მუქი ნიშანი — ყველაზე სავარაუდო{compare ? ', წყვეტილი — თუ არ იყიდი' : ''}.
+      </div>
     </div>
   )
 }

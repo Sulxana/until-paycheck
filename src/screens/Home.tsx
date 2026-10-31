@@ -262,7 +262,6 @@ function PurchaseSheet({ open, onClose, onPreview }: { open: boolean; onClose: (
             <div className="card" style={{ marginTop: 12, fontSize: 15, lineHeight: 1.55 }}>
               თუ დღეს <b>{gel(result.amount)}</b> დახარჯავ, ხელფასის დღეს სავარაუდოდ <b>~{fmt(r5(result.p50))} ₾</b> დაგრჩება ({signed(r5(result.p10))}…{signed(r5(result.p90))}) — {daysOfSpendText(result.p50, e.avgDaily)}. 10 მსგავსი თვიდან <b>{result.inTen}-ში</b> {fmt(e.cushion)}-ლარიან ზღვარს ქვემოთ ჩახვიდოდი. ხელფასი {v.daysLeft} დღეშია.
               <RangeBar p10={result.p10} p50={result.p50} p90={result.p90} cushion={e.cushion} compare={{ p10: v.landing.p10, p50: v.landing.p50, p90: v.landing.p90 }} />
-              <div className="tiny muted" style={{ marginTop: 2 }}>წყვეტილი ზოლი — თუ არ იყიდი</div>
             </div>
             <div className="chip" style={{ marginTop: 10, whiteSpace: 'normal', background: result.afterPayday >= e.cushion ? '#e8f6ec' : '#fff4dc' }}>
               {result.afterPayday >= e.cushion ? `ხელფასის შემდეგ იგივე ${gel(result.amount)} ზღვარს ზემოთ გტოვებს (~${fmt(r10(result.afterPayday))} ₾ მარაგით)` : `ხელფასის შემდეგაც ფული ცოტა იქნება (~${fmt(r10(result.afterPayday))} ₾)`}

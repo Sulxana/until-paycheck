@@ -115,7 +115,7 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
         </div>
         <div className="tiny muted" style={{ marginTop: 2 }}>{WEATHER_LABEL[d.base.weather as keyof typeof WEATHER_LABEL]} → {WEATHER_LABEL[d.r.weather as keyof typeof WEATHER_LABEL]} · 10 თვიდან {d.r.inTen}-ში ზღვარს ქვემოთ</div>
         <RangeBar p10={d.r.p10} p50={d.r.p50} p90={d.r.p90} cushion={d.cushion} compare={d.base} />
-        <div className="tiny muted">წყვეტილი ზოლი — თუ არ იყიდი. ხელფასის შემდეგ რომ იყიდო, დაგრჩება ~{fmt(Math.round(d.afterPayday / 10) * 10)} ₾.</div>
+        <div className="tiny muted">ხელფასის შემდეგ რომ იყიდო, დაგრჩება ~{fmt(Math.round(d.afterPayday / 10) * 10)} ₾.</div>
         <LearnLink topic="M2" text={'რას ნიშნავს „ზღვარს ქვემოთ"?'} />
         <div className="disclaimer" style={{ textAlign: 'left' }}>ℹ️ ეს ინფორმაციაა და არა რჩევა. დათვლილია შენი ხარჯების ისტორიიდან.</div>
       </div>
