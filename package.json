@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host",
     "verify": "tsx scripts/verify.ts",
-    "verify:game": "tsx scripts/verify-game.ts"
+    "verify:game": "tsx scripts/verify-game.ts",
+    "verify:fork": "tsx scripts/verify-fork.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-georgian": "5.1.0",

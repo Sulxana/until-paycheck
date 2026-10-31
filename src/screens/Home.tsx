@@ -12,7 +12,8 @@ import { Confetti } from '../components/day/parts'
 import { LearnLink } from '../components/learn/LearnLink'
 import { GameBoundary } from '../game/GameBoundary'
 
-const GameScreen = lazy(() => import('../game/GameScreen').then(m => ({ default: m.GameScreen })))
+// the entry opens the forked-road runner; the earlier mini-game (src/game/GameScreen) stays in the code base
+const ForkGame = lazy(() => import('../fork/ForkGame').then(m => ({ default: m.ForkGame })))
 
 const r5 = (v: number) => Math.round(v / 5) * 5
 const r10 = (v: number) => Math.round(v / 10) * 10
@@ -237,11 +238,7 @@ export function Home() {
         <PhonePortal>
           <GameBoundary onExit={closeGame}>
             <Suspense fallback={<div style={{ position: 'absolute', inset: 0, zIndex: 26, background: 'var(--paper)' }} />}>
-              <GameScreen
-                onExit={closeGame}
-                onCheck={() => { closeGame(); useStore.getState().setCue({ kind: 'buy', n: Date.now() }) }}
-                onTalk={() => { closeGame(); setTab('chat'); useStore.getState().setCue({ kind: 'ask', texts: ['ვერ ვიხდი სესხს'], n: Date.now() }) }}
-              />
+              <ForkGame onExit={closeGame} />
             </Suspense>
           </GameBoundary>
         </PhonePortal>
