@@ -9,7 +9,8 @@
     "preview": "vite preview --host",
     "verify": "tsx scripts/verify.ts",
     "verify:game": "tsx scripts/verify-game.ts",
-    "verify:fork": "tsx scripts/verify-fork.ts"
+    "verify:fork": "tsx scripts/verify-fork.ts",
+    "verify:chat": "tsx scripts/verify-chat.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-georgian": "5.1.0",

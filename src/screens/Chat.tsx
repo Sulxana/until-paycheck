@@ -43,7 +43,8 @@ export function Chat() {
     const t = raw.trim()
     if (!t || typing) return
     setText('')
-    push({ id: `u${Date.now()}`, from: 'user', text: t })
+    // a card number typed into the chat is saved with only its last 4 digits
+    push({ id: `u${Date.now()}`, from: 'user', text: t.replace(/\d(?:[ -]?\d){12,18}/g, m => `•••• ${m.replace(/\D/g, '').slice(-4)}`) })
     setTyping(true)
     setMood('thinking')
     setTimeout(() => {
@@ -182,7 +183,10 @@ function Card({ card }: { card: NonNullable<ChatMsg['card']> }) {
               {!cmp && (
                 <>
                   <div className="small" style={{ fontWeight: 800, marginTop: 2, color: r.nShort ? '#b4413b' : 'var(--good)' }}>
-                    {r.nShort ? `⚠ ${r.window.length}-დან ${r.nShort} თვე ზღვარს ქვემოთ` : '✓ ყველა თვე ზღვარს ზემოთ'}
+                    {!r.nShort ? '✓ ყველა თვე ზღვარს ზემოთ'
+                      : r.window.length < r.months ? (r.nShort === r.window.length ? `⚠ პირველი ${r.window.length} თვე ზღვარს ქვემოთ` : `⚠ პირველი ${r.window.length} თვიდან ${r.nShort} ზღვარს ქვემოთ`)
+                      : r.window.length > r.months ? (r.nShort === r.window.length ? `⚠ მომდევნო ${r.window.length} თვე ზღვარს ქვემოთ` : `⚠ მომდევნო ${r.window.length} თვიდან ${r.nShort} ზღვარს ქვემოთ`)
+                      : r.nShort === r.window.length ? `⚠ ყველა ${r.nShort} თვე ზღვარს ქვემოთ` : `⚠ ${r.window.length}-დან ${r.nShort} თვე ზღვარს ქვემოთ`}
                   </div>
                   <div className="tiny muted" style={{ margin: '2px 0 8px' }}>
                     სულ <b style={{ color: 'var(--ink)' }}>{gel(r.total)}</b> · სესხის ფასი <b style={{ color: r.cost ? '#b4413b' : 'var(--good)' }}>{gel(r.cost)}</b>
